@@ -4,6 +4,7 @@ import {
   UserOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  DollarOutlined 
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 
@@ -24,6 +25,10 @@ const Sidebar = () => {
       <Menu theme="dark" mode="inline" defaultSelectedKeys={["1"]}>
         <Menu.Item key="1" icon={<UserOutlined />}>
           <Link to="/clientes">Clientes</Link>
+          
+        </Menu.Item>
+        <Menu.Item key="2" icon={<DollarOutlined />}>
+        <Link to="/ventas">Ventas</Link>
         </Menu.Item>
       </Menu>
     </Sider>

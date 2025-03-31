@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import Login from "../pages/Login";
 import Clientes from "../pages/Clientes";
+import Ventas from "../pages/Ventas";
 import { Layout } from "antd";
 import Sidebar from "../components/layout/Sidebar";
 
@@ -21,6 +22,7 @@ const AppRouter = () => {
           <Sidebar />
           <Layout.Content style={{ padding: "20px" }}>
             <Routes>
+              <Route path="/ventas" element={<Ventas />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="*" element={<Navigate to="/clientes" />} />
             </Routes>
