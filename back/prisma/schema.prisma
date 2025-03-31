@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Cheque {
+  id            Int      @id @default(autoincrement())
+  banco         String
+  nroCheque     String   @unique
+  fechaCreacion DateTime @default(now())
+  fechaEmision  DateTime
+  fechaCobro    DateTime
+  monto         Int
+  estado        Int      @default(1)
+  negocioId     Int?
+  negocio       Negocio? @relation(fields: [negocioId], references: [id])
+}
+
+model Negocio {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  direccion     String?
+  fechaCreacion DateTime      @default(now())
+  estado        Int           @default(1)
+  clienteId     Int?
+  clientes      Cliente?      @relation(fields: [clienteId], references: [id])
+  ventas        Venta[]
+  entregas      Entregas[]
+  cheques       Cheque[]
+  notasCredito  NotaCredito[]
+}
+
+model Caja {
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  fechaCreacion DateTime   @default(now())
+  estado        Int        @default(1)
+  usuarios      Usuario[]
+  ventas        Venta[]
+  Entregas      Entregas[]
+}
+
+model TipoUnidad {
+  id            Int        @id @default(autoincrement())
+  tipo          String
+  fechaCreacion DateTime   @default(now())
+  estado        Int        @default(1)
+  productos     Producto[]
+}
+
+model MetodoPago {
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  fechaCreacion DateTime   @default(now())
+  estado        Int        @default(1)
+  entregas      Entregas[]
+}
+
+model Cliente {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  apellido      String
+  telefono      String?
+  editable      Int           @default(1)
+  fechaCreacion DateTime      @default(now())
+  estado        Int           @default(1)
+  ventas        Venta[]
+  entregas      Entregas[]
+  notasCredito  NotaCredito[]
+  negocios      Negocio[] // ✅ Ahora el nombre es consistente con la relación
+}
+
+model Usuario {
+  id            Int      @id @default(autoincrement())
+  usuario       String
+  password      String
+  rol           Int
+  fechaCreacion DateTime @default(now())
+  estado        Int      @default(1)
+  cajaId        Int?
+  caja          Caja?    @relation(fields: [cajaId], references: [id])
+}
+
+model Producto {
+  id            Int            @id @default(autoincrement())
+  nombre        String
+  precio        Int
+  precioInicial Int?
+  medicion      String
+  fechaCreacion DateTime       @default(now())
+  estado        Int            @default(1)
+  tipoUnidadId  Int?
+  tipoUnidad    TipoUnidad?    @relation(fields: [tipoUnidadId], references: [id])
+  detalleVentas DetalleVenta[]
+  precioLogs    PrecioLog[]
+}
+
+model PrecioLog {
+  id            Int      @id @default(autoincrement())
+  precioAntiguo Int
+  fechaAntigua  DateTime @default(now())
+  precioNuevo   Int
+  fechaNueva    DateTime @default(now())
+  estado        Int      @default(1)
+  articuloId    Int
+  articulo      Producto @relation(fields: [articuloId], references: [id])
+}
+
+model Venta {
+  id            Int            @id @default(autoincrement())
+  nroVenta      String
+  total         Int
+  fechaCreacion DateTime       @default(now())
+  estado        Int            @default(1)
+  clienteId     Int?
+  negocioId     Int
+  cajaId        Int?
+  cliente       Cliente?       @relation(fields: [clienteId], references: [id])
+  negocio       Negocio        @relation(fields: [negocioId], references: [id])
+  caja          Caja?          @relation(fields: [cajaId], references: [id])
+  detalles      DetalleVenta[]
+}
+
+model DetalleVenta {
+  id            Int      @id @default(autoincrement())
+  precio        Int
+  cantidad      Int
+  subTotal      Int
+  fechaCreacion DateTime @default(now())
+  estado        Int      @default(1)
+  ventaId       Int
+  productoId    Int
+  venta         Venta    @relation(fields: [ventaId], references: [id])
+  producto      Producto @relation(fields: [productoId], references: [id])
+}
+
+model Entregas {
+  id            Int         @id @default(autoincrement())
+  nroEntrega    String
+  monto         Int
+  fechaCreacion DateTime    @default(now())
+  estado        Int         @default(1)
+  clienteId     Int
+  negocioId     Int
+  metodoPagoId  Int?
+  cajaId        Int?
+  cliente       Cliente     @relation(fields: [clienteId], references: [id])
+  negocio       Negocio     @relation(fields: [negocioId], references: [id])
+  metodoPago    MetodoPago? @relation(fields: [metodoPagoId], references: [id])
+  caja          Caja?       @relation(fields: [cajaId], references: [id])
+}
+
+model NotaCredito {
+  id            Int      @id @default(autoincrement())
+  motivo        String
+  monto         Int
+  fechaCreacion DateTime @default(now())
+  estado        Int      @default(1)
+  clienteId     Int
+  negocioId     Int
+  cliente       Cliente  @relation(fields: [clienteId], references: [id])
+  negocio       Negocio  @relation(fields: [negocioId], references: [id])
+}
