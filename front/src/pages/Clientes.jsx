@@ -62,7 +62,9 @@ const Clientes = () => {
     },
   ];
 
-  return <Table dataSource={clientes} columns={columns} loading={loading} rowKey="id" />;
+  return <div>
+    <Table dataSource={clientes} columns={columns} loading={loading} rowKey="id" />
+    </div>;
 };
 
 export default Clientes;

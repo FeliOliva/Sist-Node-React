@@ -20,10 +20,24 @@ const Login = () => {
       if (!response.ok)
         throw new Error(data.message || "Error en la autenticación");
 
+      // Guardar token y fecha de expiración
+      const now = new Date();
+      const expiryTime = now.getTime() + 60 * 60 * 1000; // 1 hora
+
       localStorage.setItem("token", data.token);
+      localStorage.setItem("tokenExpiry", expiryTime);
+
+      // Borrar token automáticamente después de 1 hora
+      setTimeout(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("tokenExpiry");
+        message.info("Tu sesión ha expirado. Iniciá sesión nuevamente.");
+        navigate("/login");
+      }, 60 * 60 * 1000);
+
       message.success("Inicio de sesión exitoso");
 
-      // Redirigir a /clientes y recargar la página para actualizar el estado
+      // Redirigir a /clientes y recargar la página
       navigate("/clientes");
       window.location.reload();
     } catch (error) {
