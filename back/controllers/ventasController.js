@@ -116,7 +116,7 @@ const getVentasByNegocio = async (req, res) => {
 
 const addVenta = async (req, res) => {
     try {
-        const { nroVenta, clienteId, negocioId, cajaId, rol_usuario, detalles } = req.body;
+        const { id, nroVenta, clienteId, negocioId, cajaId, rol_usuario, detalles } = req.body;
 
         if (rol_usuario !== 0 && rol_usuario !== 1) {
             return res.status(401).json({ error: "No tienes permiso para realizar esta acción" });
@@ -126,32 +126,45 @@ const addVenta = async (req, res) => {
             return res.status(400).json({ error: "Faltan campos obligatorios" });
         }
 
-        // Calcular total sumando los subtotales de los detalles
         const detallesProcesados = detalles.map(detalle => ({
             ...detalle,
             subTotal: detalle.cantidad * detalle.precio
         }));
+
         const totalCalculado = detallesProcesados.reduce((sum, detalle) => sum + detalle.subTotal, 0);
 
-        // Limpiar caché de Redis antes de insertar nueva venta
         const keys = await redisClient.keys("Ventas:*");
         if (keys.length > 0) {
             await redisClient.del(keys);
         }
 
-        const nuevaVenta = await ventaModel.addVenta({
-            nroVenta,
-            total: totalCalculado, // Pasamos el total calculado
-            clienteId,
-            negocioId,
-            cajaId,
-            detalles: detallesProcesados, // Pasamos los detalles con `subTotal` ya calculado
-        });
+        let venta;
 
-        res.status(200).json(nuevaVenta);
+        if (id) {
+            venta = await ventaModel.updateVenta({
+                id,
+                nroVenta,
+                total: totalCalculado,
+                clienteId,
+                negocioId,
+                cajaId,
+                detalles: detallesProcesados,
+            });
+        } else {
+            venta = await ventaModel.addVenta({
+                nroVenta,
+                total: totalCalculado,
+                clienteId,
+                negocioId,
+                cajaId,
+                detalles: detallesProcesados,
+            });
+        }
+
+        res.status(200).json(venta);
     } catch (error) {
-        console.error("Error al agregar la venta:", error);
-        res.status(500).json({ error: "Error al agregar la venta" });
+        console.error("Error al guardar la venta:", error);
+        res.status(500).json({ error: "Error al guardar la venta" });
     }
 };
 

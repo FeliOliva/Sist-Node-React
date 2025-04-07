@@ -218,5 +218,48 @@ const updateVentaStatus = async (id, estado) => {
     }
 }
 
+const updateVenta = async (data) => {
+    try {
+        return await prisma.$transaction(async (prisma) => {
+            // Eliminar detalles anteriores
+            await prisma.detalleVenta.deleteMany({
+                where: { ventaId: parseInt(data.id) },
+            });
 
-module.exports = { getVentas, getVentaById, addVenta, updateVentaStatus, getVentasByCliente, getVentasByNegocio };
+            // Actualizar la venta
+            const ventaActualizada = await prisma.venta.update({
+                where: { id: parseInt(data.id) },
+                data: {
+                    nroVenta: data.nroVenta,
+                    total: data.total,
+                    clienteId: data.clienteId || null,
+                    negocioId: data.negocioId,
+                    cajaId: data.cajaId || null,
+                },
+            });
+
+            // Agregar los nuevos detalles
+            await prisma.detalleVenta.createMany({
+                data: data.detalles.map((detalle) => ({
+                    precio: detalle.precio,
+                    cantidad: detalle.cantidad,
+                    subTotal: detalle.subTotal,
+                    ventaId: ventaActualizada.id,
+                    productoId: detalle.productoId,
+                })),
+            });
+
+            return {
+                ...ventaActualizada,
+                detalles: data.detalles,
+            };
+        });
+    } catch (error) {
+        console.error("Error al actualizar la venta:", error);
+        throw new Error("Error al actualizar la venta");
+    }
+};
+
+
+
+module.exports = { getVentas, getVentaById, addVenta, updateVentaStatus, getVentasByCliente, getVentasByNegocio, updateVenta };
