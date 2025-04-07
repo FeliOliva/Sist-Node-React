@@ -74,11 +74,12 @@ const getProductById = async (req, res) => {
 }
 const addProduct = async (req, res) => {
     try {
-        const { nombre, precio, precioInicial, tipoUnidadId, rol_usuario } = req.body
+        const { nombre, precio, medicion, precioInicial, tipoUnidadId, rol_usuario } = req.body
+        console.log("data desde el back", req.body)
         if (rol_usuario !== 0) {
             return res.status(401).json({ error: "No tiene permiso para realizar esta accion" })
         }
-        if (!nombre || !precio || !precioInicial || !tipoUnidadId) {
+        if (!nombre || !precio || !precioInicial || !tipoUnidadId || !medicion) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" })
         }
         const keys = await redisClient.keys("Productos:*");
@@ -87,7 +88,7 @@ const addProduct = async (req, res) => {
             await redisClient.del(keys);
             await redisClient.del(keys2)
         }
-        const newProduct = await productsModel.addProduct({ nombre: nombre.toUpperCase(), precio, precioInicial, tipoUnidadId })
+        const newProduct = await productsModel.addProduct({ nombre: nombre.toUpperCase(), precio, precioInicial, tipoUnidadId, medicion });
         res.json(newProduct)
     } catch (error) {
         console.error("Error al agregar el producto", error);

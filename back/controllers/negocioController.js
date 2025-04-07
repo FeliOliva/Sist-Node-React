@@ -55,7 +55,7 @@ const addNegocio = async (req, res) => {
         if (rol_usuario !== 0) {
             return res.status(403).json({ error: "No tienes permiso para realizar esta acción" });
         }
-        if (!nombre || !direccion || clienteId) {
+        if (!nombre || !direccion || !clienteId) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
         const keys = await redisClient.keys("negocios:*");

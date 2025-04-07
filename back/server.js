@@ -48,12 +48,12 @@ app.post("/login", async (req, res) => {
         if (!usuarios) {
             return res.status(401).json({ error: "Usuario no encontrado" });
         }
-        if (password !== usuarios[0].password) {  // <-- Comparación simple, solo si las contraseñas no están encriptadas
+        if (password !== usuarios[0].password) {
             return res.status(401).json({ error: "Credenciales incorrectas" });
         }
-
+        const rol = usuarios[0].rol;
         const token = generateToken({ id: usuarios.id, usuario: usuarios.usuario });
-        res.json({ token });
+        res.json({ token, rol });
     } catch (error) {
         console.error("Error al autenticar:", error);
         res.status(500).json({ error: "Error interno del servidor" });

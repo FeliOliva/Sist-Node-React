@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Table, message, Modal, Button, Select, Input, Form, Space, List, Popconfirm } from "antd";
+import {
+  Table,
+  message,
+  Modal,
+  Button,
+  Select,
+  Input,
+  Form,
+  Space,
+  List,
+  Popconfirm,
+} from "antd";
 import { api } from "../services/api";
 
 const { Option } = Select;
@@ -26,8 +37,12 @@ const Ventas = () => {
         setLoading(true);
         const { ventas } = await api("api/ventas?page=1&limit=3");
 
-        const clientesPromises = ventas.map((venta) => api(`api/clientes/${venta.clienteId}`));
-        const negociosPromises = ventas.map((venta) => api(`api/negocio/${venta.negocioId}`));
+        const clientesPromises = ventas.map((venta) =>
+          api(`api/clientes/${venta.clienteId}`)
+        );
+        const negociosPromises = ventas.map((venta) =>
+          api(`api/negocio/${venta.negocioId}`)
+        );
 
         const [clientes, negocios] = await Promise.all([
           Promise.all(clientesPromises),
@@ -53,7 +68,7 @@ const Ventas = () => {
   }, []);
 
   const fetchClientes = async () => {
-    const res = await api("api/clientes")
+    const res = await api("api/clientes");
     console.log(res);
     setClientes(res.clients || []);
   };
@@ -61,21 +76,18 @@ const Ventas = () => {
   const fetchNegocios = async (clienteId) => {
     const res = await api(`api/negocio/${clienteId}`);
     console.log("Negocios desde API:", res);
-  
-    const negociosArray = Array.isArray(res.negocio)
-      ? res.negocio
-      : [res]; // si ya es el negocio directamente
-  
+
+    const negociosArray = Array.isArray(res.negocio) ? res.negocio : [res]; // si ya es el negocio directamente
+
     setNegocios(negociosArray);
   };
-  
 
   const buscarProductos = async () => {
     if (productoBuscado.length < 2) return;
     const res = await api("api/products?nombre=" + productoBuscado);
     setProductosDisponibles(res.products || []);
   };
-  
+
   const agregarProducto = (producto) => {
     if (!cantidad || cantidad <= 0) return;
     setProductosSeleccionados([
@@ -96,11 +108,20 @@ const Ventas = () => {
     setProductosSeleccionados(nuevos);
   };
 
-  const total = productosSeleccionados.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
+  const total = productosSeleccionados.reduce(
+    (acc, p) => acc + p.precio * p.cantidad,
+    0
+  );
 
   const guardarVenta = async () => {
-    if (!selectedCliente || !selectedNegocio || productosSeleccionados.length === 0) {
-      message.warning("Debe seleccionar cliente, negocio y al menos un producto");
+    if (
+      !selectedCliente ||
+      !selectedNegocio ||
+      productosSeleccionados.length === 0
+    ) {
+      message.warning(
+        "Debe seleccionar cliente, negocio y al menos un producto"
+      );
       return;
     }
 
@@ -160,12 +181,23 @@ const Ventas = () => {
 
   return (
     <div>
-      <Button type="primary" onClick={() => {
-        fetchClientes();
-        setModalVisible(true);
-      }}>Registrar Venta</Button>
+      <Button
+        type="primary"
+        onClick={() => {
+          fetchClientes();
+          setModalVisible(true);
+        }}
+      >
+        Registrar Venta
+      </Button>
 
-      <Table dataSource={ventas} columns={columns} loading={loading} rowKey="id" style={{ marginTop: 20 }} />
+      <Table
+        dataSource={ventas}
+        columns={columns}
+        loading={loading}
+        rowKey="id"
+        style={{ marginTop: 20 }}
+      />
 
       <Modal
         title="Nueva Venta"
@@ -182,18 +214,28 @@ const Ventas = () => {
           }
         }}
         footer={[
-          <Button key="cancelar" onClick={() => {
-            if (productosSeleccionados.length > 0) {
-              Modal.confirm({
-                title: "¿Cancelar esta venta?",
-                content: "Se perderán los datos ingresados.",
-                onOk: () => setModalVisible(false),
-              });
-            } else {
-              setModalVisible(false);
-            }
-          }}>Cancelar</Button>,
-          <Button key="guardar" type="primary" onClick={guardarVenta} loading={isSaving}>
+          <Button
+            key="cancelar"
+            onClick={() => {
+              if (productosSeleccionados.length > 0) {
+                Modal.confirm({
+                  title: "¿Cancelar esta venta?",
+                  content: "Se perderán los datos ingresados.",
+                  onOk: () => setModalVisible(false),
+                });
+              } else {
+                setModalVisible(false);
+              }
+            }}
+          >
+            Cancelar
+          </Button>,
+          <Button
+            key="guardar"
+            type="primary"
+            onClick={guardarVenta}
+            loading={isSaving}
+          >
             Guardar Venta
           </Button>,
         ]}
@@ -269,12 +311,17 @@ const Ventas = () => {
               renderItem={(item, index) => (
                 <List.Item
                   actions={[
-                    <Button danger onClick={() => eliminarProducto(index)} size="small">
+                    <Button
+                      danger
+                      onClick={() => eliminarProducto(index)}
+                      size="small"
+                    >
                       Eliminar
-                    </Button>
+                    </Button>,
                   ]}
                 >
-                  {item.nombre} x {item.cantidad} = ${item.precio * item.cantidad}
+                  {item.nombre} x {item.cantidad} = $
+                  {item.precio * item.cantidad}
                 </List.Item>
               )}
             />

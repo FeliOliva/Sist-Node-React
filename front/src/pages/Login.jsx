@@ -26,11 +26,13 @@ const Login = () => {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("tokenExpiry", expiryTime);
+      localStorage.setItem("rol", data.rol);
 
       // Borrar token automáticamente después de 1 hora
       setTimeout(() => {
         localStorage.removeItem("token");
         localStorage.removeItem("tokenExpiry");
+        localStorage.removeItem("rol");
         message.info("Tu sesión ha expirado. Iniciá sesión nuevamente.");
         navigate("/login");
       }, 60 * 60 * 1000);

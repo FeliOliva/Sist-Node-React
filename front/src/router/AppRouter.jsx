@@ -9,6 +9,8 @@ import {
 import Login from "../pages/Login";
 import Clientes from "../pages/Clientes";
 import Ventas from "../pages/Ventas";
+import Productos from "../pages/Productos";
+import Negocios from "../pages/Negocios";
 import Sidebar from "../components/layout/Sidebar";
 
 const AppRouter = () => {
@@ -22,6 +24,8 @@ const AppRouter = () => {
             <Route path="clientes" element={<Clientes />} />
             <Route path="ventas" element={<Ventas />} />
             <Route path="*" element={<Navigate to="/clientes" />} />
+            <Route path="productos" element={<Productos />} />
+            <Route path="negocios/:id" element={<Negocios />} />
           </Route>
         ) : (
           <>
