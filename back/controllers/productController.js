@@ -13,7 +13,7 @@ const getAllProducts = async (req, res) => {
 }
 const getProducts = async (req, res) => {
     try {
-        const { page, limit, search = "" } = req.query; // <--- Agregado search
+        const { page, limit } = req.query;
         const pageNumber = parseInt(page);
         const limitNumber = parseInt(limit);
 
@@ -21,16 +21,18 @@ const getProducts = async (req, res) => {
             return res.status(400).json({ error: "Los parámetros de paginación no son válidos" });
         }
 
-        const cacheKey = `Productos:${limitNumber}:${pageNumber}:${search}`; // <-- Cache separada por búsqueda
+        const cacheKey = `Productos:${limitNumber}:${pageNumber}`;
 
+        //Verificar si los datos están en caché
         const cachedData = await redisClient.get(cacheKey);
         if (cachedData) {
-            return res.status(200).json(JSON.parse(cachedData));
+            return res.status(200).json(JSON.parse(cachedData)); // Retorna la caché
         }
 
-        // PASAR SEARCH AL MODEL
-        const productsData = await productsModel.getProducts(limitNumber, pageNumber, search);
+        //Consultar la base de datos con Prisma
+        const productsData = await productsModel.getProducts(limitNumber, pageNumber);
 
+        //Guardar en Redis con expiración de 10 minutos
         await redisClient.setEx(cacheKey, 600, JSON.stringify(productsData));
 
         res.status(200).json(productsData);
@@ -38,8 +40,7 @@ const getProducts = async (req, res) => {
         console.error("Error al obtener los productos:", error);
         res.status(500).json({ error: "Error al obtener los productos" });
     }
-};
-
+}
 const getProductById = async (req, res) => {
     try {
         const { id } = req.params;

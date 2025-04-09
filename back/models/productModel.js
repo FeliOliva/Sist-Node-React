@@ -24,35 +24,19 @@ const getAllProducts = async () => {
     }
 }
 
-const getProducts = async (limit, page, search = "") => {
+const getProducts = async (limit, page) => {
     try {
         const offset = (page - 1) * limit;
-        const whereClause = search
-            ? { nombre: { contains: search.toLowerCase() } }
-            : {};
-
         const products = await prisma.producto.findMany({
-            where: whereClause,
             skip: offset,
-            take: limit,
-            include: {
-                tipoUnidad: {
-                    select: {
-                        tipo: true,
-                    },
-                },
-            }
+            take: limit
         });
-
-        const totalProducts = await prisma.producto.count({
-            where: whereClause,
-        });
-
+        const totalProducts = await prisma.producto.count();
         return {
             products,
             total: totalProducts,
             totalPages: Math.ceil(totalProducts / limit),
-            currentPage: page,
+            currentPage: page
         };
     } catch (error) {
         console.error("Error consultando productos:", error);

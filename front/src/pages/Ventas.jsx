@@ -14,7 +14,30 @@ import { api } from "../services/api";
 
 const { Option } = Select;
 
+// Hook personalizado para detectar si la pantalla es móvil
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768); // 768px es generalmente el breakpoint para dispositivos móviles
+    };
+
+    // Verificar al inicio
+    checkScreenSize();
+
+    // Escuchar cambios de tamaño de ventana
+    window.addEventListener('resize', checkScreenSize);
+    
+    // Limpiar el listener cuando el componente se desmonta
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  return isMobile;
+};
+
 const Ventas = () => {
+  const isMobile = useIsMobile();
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,42 +51,48 @@ const Ventas = () => {
   const [cantidad, setCantidad] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [ventaEditando, setVentaEditando] = useState(null);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(8);
+  const [totalVentas, setTotalVentas] = useState(0);
+
+  const fetchVentas = async (page = 1) => {
+    try {
+      setLoading(true);
+      const { ventas, total } = await api(`api/ventas?page=${page}&limit=${pageSize}`);
+  
+      const clientesPromises = ventas.map((venta) =>
+        api(`api/clientes/${venta.clienteId}`)
+      );
+      const negociosPromises = ventas.map((venta) =>
+        api(`api/negocio/${venta.negocioId}`)
+      );
+  
+      const [clientes, negocios] = await Promise.all([
+        Promise.all(clientesPromises),
+        Promise.all(negociosPromises),
+      ]);
+  
+      const ventasConNombres = ventas.map((venta, index) => ({
+        ...venta,
+        nombre: clientes[index]?.nombre || "Desconocido",
+        apellido: clientes[index]?.apellido || "Desconocido",
+        negocioNombre: negocios[index]?.nombre || "Desconocido",
+      }));
+  
+      setVentas(ventasConNombres);
+      setTotalVentas(total || ventas.length);
+      setCurrentPage(page);
+    } catch (error) {
+      message.error("Error al obtener ventas: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchVentas = async () => {
-      try {
-        setLoading(true);
-        const { ventas } = await api("api/ventas?page=1&limit=100");
-
-        const clientesPromises = ventas.map((venta) =>
-          api(`api/clientes/${venta.clienteId}`)
-        );
-        const negociosPromises = ventas.map((venta) =>
-          api(`api/negocio/${venta.negocioId}`)
-        );
-
-        const [clientes, negocios] = await Promise.all([
-          Promise.all(clientesPromises),
-          Promise.all(negociosPromises),
-        ]);
-
-        const ventasConNombres = ventas.map((venta, index) => ({
-          ...venta,
-          nombre: clientes[index]?.nombre || "Desconocido",
-          apellido: clientes[index]?.apellido || "Desconocido",
-          negocioNombre: negocios[index]?.nombre || "Desconocido",
-        }));
-
-        setVentas(ventasConNombres);
-      } catch (error) {
-        message.error("Error al obtener ventas: " + error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVentas();
-  }, []);
+    fetchVentas(currentPage);
+  }, [currentPage]);
 
   const fetchClientes = async () => {
     const res = await api("api/clientes");
@@ -76,26 +105,28 @@ const Ventas = () => {
     setNegocios(negociosArray);
   };
 
-  const buscarProductos = async (query) => {
+  const buscarProductos = async () => {
     try {
-      const res = await api(
-        `api/products?limit=10&page=1&search=${encodeURIComponent(query)}`
+      const res = await api("api/getAllProducts");
+      const productos = res.products || [];
+      console.log(productos);
+      // Filtrar en el frontend por coincidencia de nombre
+      const filtrados = productos.filter((producto) =>
+        producto.nombre.toLowerCase().includes(productoBuscado.toLowerCase())
       );
-      setProductosDisponibles(res.products || []);
+
+      setProductosDisponibles(filtrados);
     } catch (err) {
       message.error("Error al buscar productos: " + err.message);
     }
   };
 
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (productoBuscado.trim().length >= 2) {
-        buscarProductos(productoBuscado);
-      } else {
-        setProductosDisponibles([]);
-      }
-    }, 400);
-    return () => clearTimeout(delayDebounce);
+    if (productoBuscado.trim().length >= 2) {
+      buscarProductos();
+    } else {
+      setProductosDisponibles([]);
+    }
   }, [productoBuscado]);
 
   const agregarProducto = (producto) => {
@@ -112,10 +143,13 @@ const Ventas = () => {
       {
         ...producto,
         cantidad: parseInt(cantidad),
+        tipoUnidad: producto.tipoUnidad?.tipo || "Unidad", // Guardar unidad
       },
     ]);
+
     setProductoBuscado("");
     setCantidad(1);
+    setUnidadSeleccionada("");
     setProductosDisponibles([]);
   };
 
@@ -246,19 +280,46 @@ const Ventas = () => {
   };
 
   const columns = [
-    { title: "Nro. Venta", dataIndex: "nroVenta", key: "nroVenta" },
-    { title: "Nombre", dataIndex: "nombre", key: "nombre" },
-    { title: "Apellido", dataIndex: "apellido", key: "apellido" },
-    { title: "Negocio", dataIndex: "negocioNombre", key: "negocioNombre" },
-    { title: "Total", dataIndex: "total", key: "total" },
-    { title: "Fecha", dataIndex: "fechaCreacion", key: "fechaCreacion" },
+    { 
+      title: "Nro. Venta", 
+      dataIndex: "nroVenta", 
+      key: "nroVenta" 
+    },
+    { 
+      title: "Nombre", 
+      dataIndex: "nombre", 
+      key: "nombre" 
+    },
+    { 
+      title: "Apellido", 
+      dataIndex: "apellido", 
+      key: "apellido",
+      responsive: ["sm"] // Solo visible en pantallas sm y superiores
+    },
+    { 
+      title: "Negocio", 
+      dataIndex: "negocioNombre", 
+      key: "negocioNombre",
+      responsive: ["sm"] // Solo visible en pantallas sm y superiores
+    },
+    { 
+      title: "Total", 
+      dataIndex: "total", 
+      key: "total" 
+    },
+    { 
+      title: "Fecha", 
+      dataIndex: "fechaCreacion", 
+      key: "fechaCreacion",
+      responsive: ["md"] // Solo visible en pantallas md y superiores
+    },
     {
       title: "Acciones",
       key: "acciones",
       render: (text, record) => (
-        <Space>
-          <Button onClick={() => editarVenta(record)}>Editar</Button>
-          <Button danger onClick={() => eliminarVenta(record.id)}>
+        <Space size="small">
+          <Button size={isMobile ? "small" : "middle"} onClick={() => editarVenta(record)}>Editar</Button>
+          <Button size={isMobile ? "small" : "middle"} danger onClick={() => eliminarVenta(record.id)}>
             Eliminar
           </Button>
         </Space>
@@ -267,7 +328,7 @@ const Ventas = () => {
   ];
 
   return (
-    <div>
+    <div className="responsive-container" style={{ width: "100%", overflowX: "auto" }}>
       <Button
         type="primary"
         onClick={() => {
@@ -284,6 +345,17 @@ const Ventas = () => {
         loading={loading}
         rowKey="id"
         style={{ marginTop: 20 }}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalVentas,
+          onChange: (page) => setCurrentPage(page),
+          position: ["bottomCenter"],
+          size: isMobile ? "small" : "default",
+          responsive: true,
+        }}
+        size={isMobile ? "small" : "default"}
+        scroll={{ x: "max-content" }}
       />
 
       <Modal
@@ -309,6 +381,8 @@ const Ventas = () => {
             Guardar Venta
           </Button>,
         ]}
+        width={isMobile ? "95%" : "700px"}
+        style={{ maxWidth: "700px" }}
       >
         <Form layout="vertical">
           <Form.Item label="Cliente">
@@ -365,12 +439,16 @@ const Ventas = () => {
               renderItem={(item) => (
                 <List.Item
                   style={{ cursor: "pointer" }}
-                  onClick={() => agregarProducto(item)}
+                  onClick={() => {
+                    setUnidadSeleccionada(item.tipoUnidad?.tipo || "Unidad");
+                    agregarProducto(item);
+                  }}
                 >
-                  {item.nombre} - ${item.precio}
+                  {item.nombre} ({item.tipoUnidad?.tipo || "Unidad"}) - ${item.precio}
                 </List.Item>
               )}
               style={{ maxHeight: 150, overflowY: "auto", marginTop: 8 }}
+              size={isMobile ? "small" : "default"}
             />
           </Form.Item>
 
@@ -384,16 +462,16 @@ const Ventas = () => {
                     <Button
                       danger
                       onClick={() => eliminarProducto(index)}
-                      size="small"
+                      size={isMobile ? "small" : "middle"}
                     >
                       Eliminar
                     </Button>,
                   ]}
                 >
-                  {item.nombre} x {item.cantidad} = $
-                  {item.precio * item.cantidad}
+                  {item.nombre} ({item.tipoUnidad || "Unidad"}) x {item.cantidad} = ${item.precio * item.cantidad}
                 </List.Item>
               )}
+              size={isMobile ? "small" : "default"}
             />
             <div style={{ marginTop: 10, fontWeight: "bold" }}>
               Total: ${total.toFixed(2)}
