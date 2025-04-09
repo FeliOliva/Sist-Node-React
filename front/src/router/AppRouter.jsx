@@ -14,7 +14,7 @@ import Negocios from "../pages/Negocios";
 import Sidebar from "../components/layout/Sidebar";
 
 const AppRouter = () => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   return (
     <Router>

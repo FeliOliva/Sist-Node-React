@@ -3,7 +3,7 @@ import axios from "axios";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export const api = async (endpoint, method = "GET", body = null) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token"); // cambio aquí
 
     const config = {
         url: `${API_URL}/${endpoint}`,
@@ -14,7 +14,6 @@ export const api = async (endpoint, method = "GET", body = null) => {
         },
     };
 
-    // Solo incluir `data` si es POST o PUT o PATCH
     if (body && !["GET", "DELETE"].includes(method)) {
         config.data = body;
     }
@@ -27,4 +26,3 @@ export const api = async (endpoint, method = "GET", body = null) => {
         throw new Error(error.response?.data?.message || "Error en la petición");
     }
 };
-

@@ -62,7 +62,7 @@ const Productos = () => {
   };
 
   const onFinish = async (values) => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     let rol_usuario = 0;
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));

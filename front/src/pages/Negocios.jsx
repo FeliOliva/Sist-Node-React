@@ -35,7 +35,7 @@ const Negocios = () => {
 
   const handleAddNegocio = async (values) => {
     try {
-      const rol = localStorage.getItem("rol");
+      const rol = sessionStorage.getItem("rol");
       await api("api/negocio", "POST", {
         ...values,
         clienteId: parseInt(id),

@@ -63,7 +63,7 @@ const Clientes = () => {
   };
 
   const handleSubmit = async (values) => {
-    const rol = parseInt(localStorage.getItem("rol")) || 0;
+    const rol = parseInt(sessionStorage.getItem("rol")) || 0;
     const clientePayload = {
       nombre: values.nombre,
       apellido: values.apellido,

@@ -24,15 +24,14 @@ const Login = () => {
       const now = new Date();
       const expiryTime = now.getTime() + 60 * 60 * 1000; // 1 hora
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("tokenExpiry", expiryTime);
-      localStorage.setItem("rol", data.rol);
-
-      // Borrar token automáticamente después de 1 hora
+      
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("tokenExpiry", expiryTime);
+      sessionStorage.setItem("rol", data.rol);
       setTimeout(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("tokenExpiry");
-        localStorage.removeItem("rol");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("tokenExpiry");
+        sessionStorage.removeItem("rol");
         message.info("Tu sesión ha expirado. Iniciá sesión nuevamente.");
         navigate("/login");
       }, 60 * 60 * 1000);
