@@ -20,9 +20,8 @@ const Login = () => {
       if (!response.ok)
         throw new Error(data.message || "Error en la autenticación");
 
-      // Guardar token y fecha de expiración
       const now = new Date();
-      const expiryTime = now.getTime() + 60 * 60 * 1000; // 1 hora
+      const expiryTime = now.getTime() + 60 * 60 * 1000; 
 
       
       sessionStorage.setItem("token", data.token);
@@ -38,7 +37,6 @@ const Login = () => {
 
       message.success("Inicio de sesión exitoso");
 
-      // Redirigir a /clientes y recargar la página
       navigate("/clientes");
       window.location.reload();
     } catch (error) {

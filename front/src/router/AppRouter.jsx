@@ -15,17 +15,21 @@ import Sidebar from "../components/layout/Sidebar";
 
 const AppRouter = () => {
   const token = sessionStorage.getItem("token");
+  const expiry = sessionStorage.getItem("tokenExpiry");
+  const now = Date.now();
+
+  const isAuthenticated = token && expiry && now < Number(expiry);
 
   return (
     <Router>
       <Routes>
-        {token ? (
+        {isAuthenticated ? (
           <Route path="/" element={<Sidebar />}>
             <Route path="clientes" element={<Clientes />} />
             <Route path="ventas" element={<Ventas />} />
-            <Route path="*" element={<Navigate to="/clientes" />} />
             <Route path="productos" element={<Productos />} />
             <Route path="negocios/:id" element={<Negocios />} />
+            <Route path="*" element={<Navigate to="/clientes" />} />
           </Route>
         ) : (
           <>

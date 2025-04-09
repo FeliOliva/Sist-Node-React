@@ -18,7 +18,7 @@ const Productos = () => {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(3);
+  const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
@@ -27,7 +27,8 @@ const Productos = () => {
     setLoading(true);
     try {
       const data = await api(`api/products?page=${page}&limit=${pageSize}`);
-      setProductos(data.products); // 👈 asegura que sea un array
+      setProductos(data.products);
+      console.log("data", data.products);
       setTotal(data.total || data.products?.length || 0);
       setCurrentPage(page);
     } catch (error) {
@@ -76,7 +77,6 @@ const Productos = () => {
       precioInicial: values.precio,
       rol_usuario,
     };
-    console.log("body", body);
     try {
       await api("api/products", "POST", body);
       message.success("Producto agregado correctamente");

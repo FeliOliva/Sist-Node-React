@@ -78,7 +78,9 @@ const Ventas = () => {
 
   const buscarProductos = async (query) => {
     try {
-      const res = await api(`api/products?limit=10&page=1&search=${encodeURIComponent(query)}`);
+      const res = await api(
+        `api/products?limit=10&page=1&search=${encodeURIComponent(query)}`
+      );
       setProductosDisponibles(res.products || []);
     } catch (err) {
       message.error("Error al buscar productos: " + err.message);
@@ -139,7 +141,11 @@ const Ventas = () => {
   };
 
   const guardarVenta = async () => {
-    if (!selectedCliente || !selectedNegocio || productosSeleccionados.length === 0) {
+    if (
+      !selectedCliente ||
+      !selectedNegocio ||
+      productosSeleccionados.length === 0
+    ) {
       message.warning("Debe completar todos los campos");
       return;
     }
@@ -147,7 +153,9 @@ const Ventas = () => {
     setIsSaving(true);
 
     try {
-      const nroVenta = ventaEditando ? ventaEditando.nroVenta : obtenerProximoNumeroVenta();
+      const nroVenta = ventaEditando
+        ? ventaEditando.nroVenta
+        : obtenerProximoNumeroVenta();
 
       const detalles = productosSeleccionados.map((producto) => ({
         precio: producto.precio,
@@ -167,10 +175,15 @@ const Ventas = () => {
 
       await api("api/ventas", "POST", ventaData);
 
-      message.success(ventaEditando ? "Venta editada con éxito" : "Venta guardada con éxito");
-      alert(ventaEditando ? "¡Venta editada exitosamente!" : "¡Venta guardada exitosamente!");
+      message.success(
+        ventaEditando ? "Venta editada con éxito" : "Venta guardada con éxito"
+      );
+      alert(
+        ventaEditando
+          ? "¡Venta editada exitosamente!"
+          : "¡Venta guardada exitosamente!"
+      );
       window.location.reload();
-
     } catch (err) {
       message.error("Error al guardar venta: " + err.message);
     } finally {
@@ -178,20 +191,21 @@ const Ventas = () => {
     }
   };
 
-
   const editarVenta = async (venta) => {
     try {
       await fetchClientes(); // para mostrar todos los clientes
-  
+
       const cliente = await api(`api/clientes/${venta.clienteId}`);
       const negocios = await api(`api/negocio/${venta.clienteId}`);
       setSelectedCliente(venta.clienteId);
       setSelectedNegocio(venta.negocioId);
-      setNegocios(Array.isArray(negocios.negocio) ? negocios.negocio : [negocios]);
-  
+      setNegocios(
+        Array.isArray(negocios.negocio) ? negocios.negocio : [negocios]
+      );
+
       // 1. Obtener detalles de productos
       const detalles = venta.detalles || [];
-  
+
       // 2. Pedir la info de cada producto por su id
       const productosInfo = await Promise.all(
         detalles.map(async (detalle) => {
@@ -203,25 +217,23 @@ const Ventas = () => {
           };
         })
       );
-  
+
       // 3. Setear productos seleccionados
       setProductosSeleccionados(productosInfo);
-  
+
       // Guardar la venta que se está editando
       setVentaEditando(venta);
       setModalVisible(true);
-  
+
       // Agregar cliente a la lista si no está
       const yaExiste = clientes.some((c) => c.id === cliente.id);
       if (!yaExiste) {
         setClientes((prev) => [...prev, cliente]);
       }
-  
     } catch (error) {
       message.error("Error al cargar los datos de la venta: " + error.message);
     }
   };
-  
 
   const eliminarVenta = async (id) => {
     try {
@@ -232,7 +244,6 @@ const Ventas = () => {
       message.error("Error al eliminar la venta: " + error.message);
     }
   };
-  
 
   const columns = [
     { title: "Nro. Venta", dataIndex: "nroVenta", key: "nroVenta" },
@@ -289,7 +300,12 @@ const Ventas = () => {
           <Button key="cancelar" onClick={() => setModalVisible(false)}>
             Cancelar
           </Button>,
-          <Button key="guardar" type="primary" onClick={guardarVenta} loading={isSaving}>
+          <Button
+            key="guardar"
+            type="primary"
+            onClick={guardarVenta}
+            loading={isSaving}
+          >
             Guardar Venta
           </Button>,
         ]}
@@ -312,7 +328,6 @@ const Ventas = () => {
               ))}
             </Select>
           </Form.Item>
-
 
           <Form.Item label="Negocio">
             <Select
@@ -348,7 +363,10 @@ const Ventas = () => {
               bordered
               dataSource={productosDisponibles}
               renderItem={(item) => (
-                <List.Item style={{ cursor: "pointer" }} onClick={() => agregarProducto(item)}>
+                <List.Item
+                  style={{ cursor: "pointer" }}
+                  onClick={() => agregarProducto(item)}
+                >
                   {item.nombre} - ${item.precio}
                 </List.Item>
               )}
@@ -363,12 +381,17 @@ const Ventas = () => {
               renderItem={(item, index) => (
                 <List.Item
                   actions={[
-                    <Button danger onClick={() => eliminarProducto(index)} size="small">
+                    <Button
+                      danger
+                      onClick={() => eliminarProducto(index)}
+                      size="small"
+                    >
                       Eliminar
                     </Button>,
                   ]}
                 >
-                  {item.nombre} x {item.cantidad} = ${item.precio * item.cantidad}
+                  {item.nombre} x {item.cantidad} = $
+                  {item.precio * item.cantidad}
                 </List.Item>
               )}
             />
