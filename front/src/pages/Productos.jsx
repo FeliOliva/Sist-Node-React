@@ -44,6 +44,8 @@ const Productos = () => {
 
   const toggleProductos = async (id, estado) => {
     try {
+      console.log("estado", estado);
+      console.log("id", id);
       const nuevoEstado = estado === 1 ? 0 : 1;
       const metodo = estado === 1 ? "DELETE" : "POST";
       await api(`api/products/${id}`, metodo);
@@ -98,19 +100,6 @@ const Productos = () => {
       title: "Precio",
       dataIndex: "precio",
       key: "precio",
-    },
-    {
-      title: "Medición",
-      dataIndex: "medicion",
-      key: "medicion",
-    },
-    {
-      title: "Estado",
-      dataIndex: "estado",
-      key: "estado",
-      render: (text, record) => (
-        <span>{record.estado === 1 ? "Activo" : "Inactivo"}</span>
-      ),
     },
     {
       title: "Acciones",

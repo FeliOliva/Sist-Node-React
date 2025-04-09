@@ -3,8 +3,17 @@ const prisma = new PrismaClient();
 
 const getAllProducts = async () => {
     try {
-        const products = await prisma.producto.findMany();
+        const products = await prisma.producto.findMany({
+            include: {
+                tipoUnidad: {
+                    select: {
+                        tipo: true,
+                    },
+                },
+            }
+        });
         const totalProducts = await prisma.producto.count();
+
         return {
             products,
             total: totalProducts,
@@ -14,35 +23,43 @@ const getAllProducts = async () => {
         throw new Error("Error al obtener los productos");
     }
 }
+
 const getProducts = async (limit, page, search = "") => {
     try {
-      const offset = (page - 1) * limit;
-      const whereClause = search
-        ? { nombre: { contains: search.toLowerCase() } }
-        : {};
-  
-      const products = await prisma.producto.findMany({
-        where: whereClause,
-        skip: offset,
-        take: limit,
-      });
-  
-      const totalProducts = await prisma.producto.count({
-        where: whereClause,
-      });
-  
-      return {
-        products,
-        total: totalProducts,
-        totalPages: Math.ceil(totalProducts / limit),
-        currentPage: page,
-      };
+        const offset = (page - 1) * limit;
+        const whereClause = search
+            ? { nombre: { contains: search.toLowerCase() } }
+            : {};
+
+        const products = await prisma.producto.findMany({
+            where: whereClause,
+            skip: offset,
+            take: limit,
+            include: {
+                tipoUnidad: {
+                    select: {
+                        tipo: true,
+                    },
+                },
+            }
+        });
+
+        const totalProducts = await prisma.producto.count({
+            where: whereClause,
+        });
+
+        return {
+            products,
+            total: totalProducts,
+            totalPages: Math.ceil(totalProducts / limit),
+            currentPage: page,
+        };
     } catch (error) {
-      console.error("Error consultando productos:", error);
-      throw new Error("Error al obtener los productos");
+        console.error("Error consultando productos:", error);
+        throw new Error("Error al obtener los productos");
     }
-  };
-  
+};
+
 const getProductById = async (id) => {
     try {
         return await prisma.producto.findUnique({ where: { id: parseInt(id) } });

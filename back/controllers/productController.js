@@ -4,20 +4,7 @@ const { redisClient } = require("../db");
 
 const getAllProducts = async (req, res) => {
     try {
-        const cacheKey = `AllProductos`;
-
-        //Verificar si los datos están en caché
-        const cachedData = await redisClient.get(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(JSON.parse(cachedData)); // Retorna la caché
-        }
-
-        //Consultar la base de datos con Prisma
         const productsData = await productsModel.getAllProducts();
-
-        //Guardar en Redis con expiración de 10 minutos
-        await redisClient.setEx(cacheKey, 600, JSON.stringify(productsData));
-
         res.status(200).json(productsData);
     } catch (error) {
         console.error("Error al obtener los productos:", error);
@@ -26,33 +13,33 @@ const getAllProducts = async (req, res) => {
 }
 const getProducts = async (req, res) => {
     try {
-      const { page, limit, search = "" } = req.query; // <--- Agregado search
-      const pageNumber = parseInt(page);
-      const limitNumber = parseInt(limit);
-  
-      if (isNaN(pageNumber) || pageNumber < 1 || isNaN(limitNumber) || limitNumber < 1) {
-        return res.status(400).json({ error: "Los parámetros de paginación no son válidos" });
-      }
-  
-      const cacheKey = `Productos:${limitNumber}:${pageNumber}:${search}`; // <-- Cache separada por búsqueda
-  
-      const cachedData = await redisClient.get(cacheKey);
-      if (cachedData) {
-        return res.status(200).json(JSON.parse(cachedData));
-      }
-  
-      // PASAR SEARCH AL MODEL
-      const productsData = await productsModel.getProducts(limitNumber, pageNumber, search);
-  
-      await redisClient.setEx(cacheKey, 600, JSON.stringify(productsData));
-  
-      res.status(200).json(productsData);
+        const { page, limit, search = "" } = req.query; // <--- Agregado search
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+
+        if (isNaN(pageNumber) || pageNumber < 1 || isNaN(limitNumber) || limitNumber < 1) {
+            return res.status(400).json({ error: "Los parámetros de paginación no son válidos" });
+        }
+
+        const cacheKey = `Productos:${limitNumber}:${pageNumber}:${search}`; // <-- Cache separada por búsqueda
+
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(JSON.parse(cachedData));
+        }
+
+        // PASAR SEARCH AL MODEL
+        const productsData = await productsModel.getProducts(limitNumber, pageNumber, search);
+
+        await redisClient.setEx(cacheKey, 600, JSON.stringify(productsData));
+
+        res.status(200).json(productsData);
     } catch (error) {
-      console.error("Error al obtener los productos:", error);
-      res.status(500).json({ error: "Error al obtener los productos" });
+        console.error("Error al obtener los productos:", error);
+        res.status(500).json({ error: "Error al obtener los productos" });
     }
-  };
-  
+};
+
 const getProductById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -73,21 +60,19 @@ const getProductById = async (req, res) => {
 }
 const addProduct = async (req, res) => {
     try {
-        const { nombre, precio, medicion, precioInicial, tipoUnidadId, rol_usuario } = req.body
+        const { nombre, precio, precioInicial, tipoUnidadId, rol_usuario } = req.body
         console.log("data desde el back", req.body)
         if (rol_usuario !== 0) {
             return res.status(401).json({ error: "No tiene permiso para realizar esta accion" })
         }
-        if (!nombre || !precio || !precioInicial || !tipoUnidadId || !medicion) {
+        if (!nombre || !precio || !precioInicial || !tipoUnidadId) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" })
         }
         const keys = await redisClient.keys("Productos:*");
-        const keys2 = await redisClient.keys("AllProductos:*");
         if (keys.length > 0) {
             await redisClient.del(keys);
-            await redisClient.del(keys2)
         }
-        const newProduct = await productsModel.addProduct({ nombre: nombre.toUpperCase(), precio, precioInicial, tipoUnidadId, medicion });
+        const newProduct = await productsModel.addProduct({ nombre: nombre.toUpperCase(), precio, precioInicial, tipoUnidadId });
         res.json(newProduct)
     } catch (error) {
         console.error("Error al agregar el producto", error);
@@ -102,13 +87,10 @@ const updateProduct = async (req, res) => {
             return res.status(400).json({ error: "El id es obligatorio" })
         }
         const product = await productsModel.getProductById(id);
-        console.log("producto", product);
         await redisClient.del(`Productos:${id}`);
         const keys = await redisClient.keys("Productos:*");
-        const keys2 = await redisClient.keys("AllProductos:*");
         if (keys.length > 0) {
             await redisClient.del(keys);
-            await redisClient.del(keys2)
         }
         if (product.precio !== precio) {
             const precioAntiguo = product.precio;
@@ -128,10 +110,8 @@ const dropProduct = async (req, res) => {
             return res.status(400).json({ error: "El id es obligatorio" })
         }
         const keys = await redisClient.keys("Productos:*");
-        const keys2 = await redisClient.keys("AllProductos:*");
         if (keys.length > 0) {
             await redisClient.del(keys);
-            await redisClient.del(keys2)
         }
         const deletedProduct = await productsModel.updateProductStatus(id, 0);
         res.json(deletedProduct);
@@ -147,10 +127,8 @@ const upProduct = async (req, res) => {
             return res.status(400).json({ error: "El id es obligatorio" })
         }
         const keys = await redisClient.keys("Productos:*");
-        const keys2 = await redisClient.keys("AllProductos:*");
         if (keys.length > 0) {
             await redisClient.del(keys);
-            await redisClient.del(keys2)
         }
         const upProduct = await productsModel.updateProductStatus(id, 1);
         res.json(upProduct);

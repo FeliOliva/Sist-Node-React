@@ -90,7 +90,6 @@ model Producto {
   nombre        String
   precio        Int
   precioInicial Int?
-  medicion      String
   fechaCreacion DateTime       @default(now())
   estado        Int            @default(1)
   tipoUnidadId  Int?
