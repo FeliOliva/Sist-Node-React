@@ -28,7 +28,7 @@ const useIsMobile = () => {
 
     // Escuchar cambios de tamaño de ventana
     window.addEventListener('resize', checkScreenSize);
-    
+
     // Limpiar el listener cuando el componente se desmonta
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
@@ -60,26 +60,26 @@ const Ventas = () => {
     try {
       setLoading(true);
       const { ventas, total } = await api(`api/ventas?page=${page}&limit=${pageSize}`);
-  
+
       const clientesPromises = ventas.map((venta) =>
         api(`api/clientes/${venta.clienteId}`)
       );
       const negociosPromises = ventas.map((venta) =>
         api(`api/negocio/${venta.negocioId}`)
       );
-  
+
       const [clientes, negocios] = await Promise.all([
         Promise.all(clientesPromises),
         Promise.all(negociosPromises),
       ]);
-  
+
       const ventasConNombres = ventas.map((venta, index) => ({
         ...venta,
         nombre: clientes[index]?.nombre || "Desconocido",
         apellido: clientes[index]?.apellido || "Desconocido",
         negocioNombre: negocios[index]?.nombre || "Desconocido",
       }));
-  
+
       setVentas(ventasConNombres);
       setTotalVentas(total || ventas.length);
       setCurrentPage(page);
@@ -100,11 +100,11 @@ const Ventas = () => {
   };
 
   const fetchNegocios = async (clienteId) => {
-    const res = await api(`api/negocio/${clienteId}`);
-    const negociosArray = Array.isArray(res.negocio) ? res.negocio : [res];
+    const res = await api(`api/getAllNegociosByCliente/${clienteId}`);
+    const negociosArray = Array.isArray(res.negocios) ? res.negocios : [];
     setNegocios(negociosArray);
   };
-
+  
   const buscarProductos = async () => {
     try {
       const res = await api("api/getAllProducts");
@@ -280,36 +280,36 @@ const Ventas = () => {
   };
 
   const columns = [
-    { 
-      title: "Nro. Venta", 
-      dataIndex: "nroVenta", 
-      key: "nroVenta" 
+    {
+      title: "Nro. Venta",
+      dataIndex: "nroVenta",
+      key: "nroVenta"
     },
-    { 
-      title: "Nombre", 
-      dataIndex: "nombre", 
-      key: "nombre" 
+    {
+      title: "Nombre",
+      dataIndex: "nombre",
+      key: "nombre"
     },
-    { 
-      title: "Apellido", 
-      dataIndex: "apellido", 
+    {
+      title: "Apellido",
+      dataIndex: "apellido",
       key: "apellido",
       responsive: ["sm"] // Solo visible en pantallas sm y superiores
     },
-    { 
-      title: "Negocio", 
-      dataIndex: "negocioNombre", 
+    {
+      title: "Negocio",
+      dataIndex: "negocioNombre",
       key: "negocioNombre",
       responsive: ["sm"] // Solo visible en pantallas sm y superiores
     },
-    { 
-      title: "Total", 
-      dataIndex: "total", 
-      key: "total" 
+    {
+      title: "Total",
+      dataIndex: "total",
+      key: "total"
     },
-    { 
-      title: "Fecha", 
-      dataIndex: "fechaCreacion", 
+    {
+      title: "Fecha",
+      dataIndex: "fechaCreacion",
       key: "fechaCreacion",
       responsive: ["md"] // Solo visible en pantallas md y superiores
     },
@@ -319,7 +319,20 @@ const Ventas = () => {
       render: (text, record) => (
         <Space size="small">
           <Button size={isMobile ? "small" : "middle"} onClick={() => editarVenta(record)}>Editar</Button>
-          <Button size={isMobile ? "small" : "middle"} danger onClick={() => eliminarVenta(record.id)}>
+          <Button
+            size={isMobile ? "small" : "middle"}
+            danger
+            onClick={() => {
+              Modal.confirm({
+                title: "¿Estás seguro?",
+                content: "Esta acción eliminará la venta permanentemente.",
+                okText: "Sí, eliminar",
+                okType: "danger",
+                cancelText: "Cancelar",
+                onOk: () => eliminarVenta(record.id),
+              });
+            }}
+          >
             Eliminar
           </Button>
         </Space>

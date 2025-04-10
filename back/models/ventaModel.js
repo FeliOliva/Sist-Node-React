@@ -66,11 +66,10 @@ const getVentasByCliente = async (clienteId, limit, page, startDate, endDate, ca
         }
         const whereClause = {
             clienteId: parseInt(clienteId),
-            estado: 1,
             ...(filterStartDate && { fechaCreacion: { gte: filterStartDate.toISOString() } }),
             ...(filterEndDate && { fechaCreacion: { lte: filterEndDate.toISOString() } }),
             ...(cajaId && { cajaId: parseInt(cajaId) })
-        }
+          };
         const ventas = await prisma.venta.findMany({
             where: whereClause,
             skip: offset,
@@ -127,11 +126,10 @@ const getVentasByNegocio = async (negocioId, limit, page, startDate, endDate, ca
         }
         const whereClause = {
             negocioId: parseInt(negocioId),
-            estado: 1,
             ...(filterStartDate && { fechaCreacion: { gte: filterStartDate.toISOString() } }),
             ...(filterEndDate && { fechaCreacion: { lte: filterEndDate.toISOString() } }),
             ...(cajaId && { cajaId: parseInt(cajaId) })
-        }
+          };
         const ventas = await prisma.venta.findMany({
             where: whereClause,
             skip: offset,
@@ -252,14 +250,24 @@ const updateVenta = async (data) => {
 
 const dropVenta = async (id) => {
     try {
-        return await prisma.venta.delete({
-            where: { id: parseInt(id) },
+        await prisma.detalleVenta.deleteMany({
+            where: {
+                ventaId: parseInt(id)  // 🔥 Convertir a número
+            }
         });
+
+        await prisma.venta.delete({
+            where: {
+                id: parseInt(id)
+            }
+        });
+
     } catch (error) {
         console.error("Error al eliminar la venta:", error);
         throw new Error("Error al eliminar la venta");
     }
 };
+
 
 
 

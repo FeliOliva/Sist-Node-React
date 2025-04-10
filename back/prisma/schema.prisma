@@ -120,7 +120,7 @@ model Venta {
   cliente       Cliente?       @relation(fields: [clienteId], references: [id])
   negocio       Negocio        @relation(fields: [negocioId], references: [id])
   caja          Caja?          @relation(fields: [cajaId], references: [id])
-  detalles      DetalleVenta[]
+  detalles      DetalleVenta[] 
 }
 
 model DetalleVenta {
@@ -132,7 +132,7 @@ model DetalleVenta {
   estado        Int      @default(1)
   ventaId       Int
   productoId    Int
-  venta         Venta    @relation(fields: [ventaId], references: [id])
+  venta         Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
   producto      Producto @relation(fields: [productoId], references: [id])
 }
 

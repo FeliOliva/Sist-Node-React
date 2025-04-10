@@ -12,6 +12,7 @@ import Ventas from "../pages/Ventas";
 import Productos from "../pages/Productos";
 import Negocios from "../pages/Negocios";
 import Sidebar from "../components/layout/Sidebar";
+import Resumenes from "../pages/Resumenes";
 
 const AppRouter = () => {
   const token = sessionStorage.getItem("token");
@@ -29,6 +30,7 @@ const AppRouter = () => {
             <Route path="ventas" element={<Ventas />} />
             <Route path="productos" element={<Productos />} />
             <Route path="negocios/:id" element={<Negocios />} />
+            <Route path="resumenes" element={<Resumenes />} />
             <Route path="*" element={<Navigate to="/clientes" />} />
           </Route>
         ) : (
