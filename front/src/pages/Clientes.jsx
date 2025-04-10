@@ -19,7 +19,7 @@ const Clientes = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(3);
+  const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const navigate = useNavigate();
   const fetchClientes = async (page = 1) => {
@@ -161,7 +161,7 @@ const Clientes = () => {
       className="responsive-container"
       style={{ width: "100%", overflowX: "auto" }}
     >
-      <Button type="primary" onClick={handleAgregarCliente}>
+      <Button type="primary" className="mb-4" onClick={handleAgregarCliente}>
         Agregar Cliente
       </Button>
 

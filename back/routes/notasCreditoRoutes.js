@@ -10,6 +10,5 @@ router.get("/notasCredito/negocio/:negocioId", verifyToken, notasCreditoControll
 router.post("/notasCredito", verifyToken, notasCreditoController.addNotasCredito);
 router.put("/notasCredito/:id", verifyToken, notasCreditoController.updateNotasCredito);
 router.delete("/notasCredito/:id", verifyToken, notasCreditoController.dropNotasCredito);
-router.post("/notasCredito/:id", verifyToken, notasCreditoController.upNotasCredito);
 
 module.exports = router;

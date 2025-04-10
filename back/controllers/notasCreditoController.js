@@ -152,7 +152,7 @@ const dropNotasCredito = async (req, res) => {
             return res.status(400).json({ error: "Falta el id de la nota de credito" });
         }
         await clearNotasCreditoCache();
-        const deletedNotaCredito = await notasCreditoModel.updateNotasCreditoStatus(id, 0);
+        const deletedNotaCredito = await notasCreditoModel.dropNotasCredito(id);
         res.json(deletedNotaCredito);
     } catch (error) {
         console.error("Error al eliminar la nota de credito", error);
@@ -160,20 +160,6 @@ const dropNotasCredito = async (req, res) => {
     }
 }
 
-const upNotasCredito = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!id) {
-            return res.status(400).json({ error: "Falta el id de la nota de credito" });
-        }
-        await clearNotasCreditoCache();
-        const upNotaCredito = await notasCreditoModel.updateNotasCreditoStatus(id, 1);
-        res.json(upNotaCredito);
-    } catch (error) {
-        console.error("Error al reactivar la nota de credito", error);
-        res.status(500).json({ error: "Error al reactivar la nota de credito" });
-    }
-}
 
 module.exports = {
     getNotasCredito,
@@ -182,6 +168,5 @@ module.exports = {
     getNotasCreditoByNegocioId,
     addNotasCredito,
     updateNotasCredito,
-    dropNotasCredito,
-    upNotasCredito
+    dropNotasCredito
 };

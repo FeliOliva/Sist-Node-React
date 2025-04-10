@@ -208,16 +208,6 @@ const addVenta = async (data) => {
     }
 };
 
-
-const updateVentaStatus = async (id, estado) => {
-    try {
-        return await prisma.venta.update({ where: { id: parseInt(id) }, data: { estado } });
-    } catch (error) {
-        console.error("Error consultando ventas:", error);
-        throw new Error("Error al obtener la venta");
-    }
-}
-
 const updateVenta = async (data) => {
     try {
         return await prisma.$transaction(async (prisma) => {
@@ -260,6 +250,17 @@ const updateVenta = async (data) => {
     }
 };
 
+const dropVenta = async (id) => {
+    try {
+        return await prisma.venta.delete({
+            where: { id: parseInt(id) },
+        });
+    } catch (error) {
+        console.error("Error al eliminar la venta:", error);
+        throw new Error("Error al eliminar la venta");
+    }
+};
 
 
-module.exports = { getVentas, getVentaById, addVenta, updateVentaStatus, getVentasByCliente, getVentasByNegocio, updateVenta };
+
+module.exports = { getVentas, getVentaById, dropVenta, addVenta, getVentasByCliente, getVentasByNegocio, updateVenta };

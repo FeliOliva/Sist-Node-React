@@ -148,16 +148,15 @@ const updateNotasCredito = async (id, motivo, monto) => {
     }
 }
 
-const updateNotasCreditoStatus = async (id, estado) => {
+const dropNotasCredito = async (id) => {
     try {
-        return await prisma.notaCredito.update({
-            where: { id: parseInt(id) },
-            data: { estado }
+        return await prisma.notaCredito.delete({
+            where: { id: parseInt(id) }
         });
     } catch (error) {
-        console.error("Error al actualizar el estado de la nota de credito", error);
-        throw new Error("Error al actualizar el estado de la nota de credito");
+        console.error("Error al eliminar la nota de credito", error);
+        throw new Error("Error al eliminar la nota de credito");
     }
 }
 
-module.exports = { getNotasCredito, getNotasCreditoByClienteId, getNotasCreditoByNegocioId, getNotasCreditoById, addNotasCredito, updateNotasCredito, updateNotasCreditoStatus };
+module.exports = { dropNotasCredito, getNotasCredito, getNotasCreditoByClienteId, getNotasCreditoByNegocioId, getNotasCreditoById, addNotasCredito, updateNotasCredito };

@@ -16,6 +16,7 @@ const { Option } = Select;
 
 const Productos = () => {
   const [productos, setProductos] = useState([]);
+  const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -28,7 +29,6 @@ const Productos = () => {
     try {
       const data = await api(`api/products?page=${page}&limit=${pageSize}`);
       setProductos(data.products);
-      console.log("data", data.products);
       setTotal(data.total || data.products?.length || 0);
       setCurrentPage(page);
     } catch (error) {
@@ -44,8 +44,6 @@ const Productos = () => {
 
   const toggleProductos = async (id, estado) => {
     try {
-      console.log("estado", estado);
-      console.log("id", id);
       const nuevoEstado = estado === 1 ? 0 : 1;
       const metodo = estado === 1 ? "DELETE" : "POST";
       await api(`api/products/${id}`, metodo);
@@ -97,6 +95,11 @@ const Productos = () => {
       key: "nombre",
     },
     {
+      title: "Unidad",
+      key: "tipoUnidad",
+      render: (_, record) => record.tipoUnidad?.tipo || "-",
+    },
+    {
       title: "Precio",
       dataIndex: "precio",
       key: "precio",
@@ -116,20 +119,30 @@ const Productos = () => {
       ),
     },
   ];
+  const productosFiltrados = productos.filter((p) =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
   return (
     <div
       className="responsive-container"
       style={{ width: "100%", overflowX: "auto" }}
     >
-      <div style={{ marginBottom: 16, textAlign: "right" }}>
+      <div style={{ marginBottom: 16, textAlign: "left" }}>
+        <Input
+          placeholder="Buscar por nombre"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          style={{ width: 300, marginTop: 10 }}
+        />
+
         <Button type="primary" onClick={() => setModalVisible(true)}>
           Agregar Producto
         </Button>
       </div>
 
       <Table
-        dataSource={productos}
+        dataSource={productosFiltrados}
         columns={columns}
         loading={loading}
         rowKey="id"
@@ -182,21 +195,10 @@ const Productos = () => {
             rules={[{ required: true, message: "Seleccione una unidad" }]}
           >
             <Select placeholder="Selecciona una unidad">
-              <Option value={1}>Kilogramo</Option>
-              <Option value={2}>Cajon</Option>
-              <Option value={3}>Bolsa</Option>
-              <Option value={4}>Atado</Option>
+              <Option value={1}>KG</Option>
+              <Option value={2}>Bolsa</Option>
+              <Option value={3}>Unidad</Option>
             </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="medicion"
-            label="Medición"
-            rules={[
-              { required: true, message: "Ingrese la medición (ej: 18kg)" },
-            ]}
-          >
-            <Input placeholder="Ej: 18kg" />
           </Form.Item>
         </Form>
       </Modal>

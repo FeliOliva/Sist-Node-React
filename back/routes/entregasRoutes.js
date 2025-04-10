@@ -10,6 +10,5 @@ router.get("/entregas/negocio/:negocioId", verifyToken, entregasControllers.getE
 router.post("/entregas", verifyToken, entregasControllers.addEntrega);
 router.put("/entregas/:id", verifyToken, entregasControllers.updateEntrega);
 router.delete("/entregas/:id", verifyToken, entregasControllers.dropEntrega);
-router.post("/entregas/:id", verifyToken, entregasControllers.upEntrega);
 
 module.exports = router;

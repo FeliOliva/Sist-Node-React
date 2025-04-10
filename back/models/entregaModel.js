@@ -201,18 +201,16 @@ const updateEntrega = async (id, monto) => {
     }
 };
 
-const updateEntregaStatus = async (id, estado) => {
+const dropEntrega = async (id) => {
     try {
-        return await prisma.entregas.update({
-            where: { id: parseInt(id) },
-            data: { estado }
+        return await prisma.entregas.delete({
+            where: { id: parseInt(id) }
         });
     } catch (error) {
-        console.error("Error actualizando estado de la entrega:", error);
-        throw new Error("Error al modificar el estado de la entrega");
+        console.error("Error eliminando entrega:", error);
+        throw new Error("Error al eliminar la entrega");
     }
-};
-
+}
 module.exports = {
     getAllEntregas,
     getEntregaById,
@@ -220,5 +218,5 @@ module.exports = {
     getEntregasByNegocio,
     addEntrega,
     updateEntrega,
-    updateEntregaStatus
+    dropEntrega
 };

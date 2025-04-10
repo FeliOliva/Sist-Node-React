@@ -1,7 +1,6 @@
 const entregaModel = require("../models/entregaModel");
 const { redisClient } = require("../db");
 
-// Función para eliminar caché de entregas generales, por cliente y por negocio
 const clearEntregaCache = async () => {
     try {
         const keys = await redisClient.keys("Entregas:*");
@@ -70,11 +69,9 @@ const getEntregaByCliente = async (req, res) => {
             return res.status(400).json({ error: "Parámetros de paginación no válidos" });
         }
 
-        // Convertir fechas a formato Date si existen
         const filterStartDate = startDate ? new Date(startDate) : null;
         let filterEndDate = endDate ? new Date(endDate) : null;
 
-        // Si hay un endDate, ajustarlo para incluir todo el día hasta las 23:59:59
         if (filterEndDate) {
             filterEndDate.setHours(23, 59, 59, 999);
         }
@@ -107,11 +104,9 @@ const getEntregasByNegocio = async (req, res) => {
             return res.status(400).json({ error: "Parámetros de paginación no válidos" });
         }
 
-        // Convertir fechas a formato Date si existen
         const filterStartDate = startDate ? new Date(startDate) : null;
         let filterEndDate = endDate ? new Date(endDate) : null;
 
-        // Si hay un endDate, ajustarlo para incluir todo el día hasta las 23:59:59
         if (filterEndDate) {
             filterEndDate.setHours(23, 59, 59, 999);
         }
@@ -141,7 +136,7 @@ const addEntrega = async (req, res) => {
             return res.status(400).json({ error: "Faltan campos obligatorios" });
         }
 
-        await clearEntregaCache(); // Eliminar caché después de agregar
+        await clearEntregaCache();
 
         const newEntrega = await entregaModel.addEntrega({ nroEntrega, monto, clienteId, negocioId, metodoPagoId, cajaId });
         res.json(newEntrega);
@@ -159,7 +154,7 @@ const updateEntrega = async (req, res) => {
             return res.status(400).json({ error: "Faltan campos obligatorios" });
         }
 
-        await clearEntregaCache(); // Eliminar caché después de actualizar
+        await clearEntregaCache();
 
         const updatedEntrega = await entregaModel.updateEntrega(id, monto);
         res.json(updatedEntrega);
@@ -176,9 +171,9 @@ const dropEntrega = async (req, res) => {
             return res.status(400).json({ error: "El id es obligatorio" });
         }
 
-        await clearEntregaCache(); // Eliminar caché después de eliminar
+        await clearEntregaCache();
 
-        const deletedEntrega = await entregaModel.updateEntregaStatus(id, 0);
+        const deletedEntrega = await entregaModel.dropEntrega(id);
         res.json(deletedEntrega);
     } catch (error) {
         console.error("Error al eliminar la entrega:", error);
@@ -186,21 +181,5 @@ const dropEntrega = async (req, res) => {
     }
 };
 
-const upEntrega = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!id) {
-            return res.status(400).json({ error: "El id es obligatorio" });
-        }
 
-        await clearEntregaCache(); // Eliminar caché después de reactivar
-
-        const restoredEntrega = await entregaModel.updateEntregaStatus(id, 1);
-        res.json(restoredEntrega);
-    } catch (error) {
-        console.error("Error al reactivar la entrega:", error);
-        res.status(500).json({ error: "Error al reactivar la entrega" });
-    }
-};
-
-module.exports = { getEntregas, getEntregaById, getEntregaByCliente, getEntregasByNegocio, addEntrega, dropEntrega, updateEntrega, upEntrega };
+module.exports = { getEntregas, getEntregaById, getEntregaByCliente, getEntregasByNegocio, addEntrega, dropEntrega, updateEntrega };

@@ -5,11 +5,7 @@ const getAllProducts = async () => {
     try {
         const products = await prisma.producto.findMany({
             include: {
-                tipoUnidad: {
-                    select: {
-                        tipo: true,
-                    },
-                },
+                tipoUnidad: true,
             }
         });
         const totalProducts = await prisma.producto.count();
@@ -29,7 +25,14 @@ const getProducts = async (limit, page) => {
         const offset = (page - 1) * limit;
         const products = await prisma.producto.findMany({
             skip: offset,
-            take: limit
+            take: limit,
+            include: {
+                tipoUnidad: {
+                    select: {
+                        tipo: true, // 👈 solo el campo tipo
+                    },
+                },
+            },
         });
         const totalProducts = await prisma.producto.count();
         return {

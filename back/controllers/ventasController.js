@@ -179,7 +179,7 @@ const dropVenta = async (req, res) => {
         if (keys.length > 0) {
             await redisClient.del(keys);
         }
-        const ventaData = await ventaModel.updateVentaStatus(id, 0);
+        const ventaData = await ventaModel.dropVenta(id);
         res.status(200).json(ventaData);
     } catch (error) {
         console.error("Error al eliminar la venta:", error);
@@ -187,22 +187,5 @@ const dropVenta = async (req, res) => {
     }
 }
 
-const upVenta = async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!id) {
-            return res.status(400).json({ error: "El id es obligatorio" });
-        }
-        const keys = await redisClient.keys("Ventas:*");
-        if (keys.length > 0) {
-            await redisClient.del(keys);
-        }
-        const ventaData = await ventaModel.updateVentaStatus(id, 1);
-        res.status(200).json(ventaData);
-    } catch (error) {
-        console.error("Error al actualizar la venta:", error);
-        res.status(500).json({ error: "Error al actualizar la venta" });
-    }
-}
 
-module.exports = { getVentas, getVentaById, addVenta, dropVenta, upVenta, getVentasByCliente, getVentasByNegocio };
+module.exports = { getVentas, getVentaById, addVenta, dropVenta, getVentasByCliente, getVentasByNegocio };
