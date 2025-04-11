@@ -45,6 +45,7 @@ app.post("/login", async (req, res) => {
 
     try {
         const usuarios = await prisma.usuario.findMany();
+        console.log(usuarios)
         if (!usuarios) {
             return res.status(401).json({ error: "Usuario no encontrado" });
         }
@@ -52,8 +53,9 @@ app.post("/login", async (req, res) => {
             return res.status(401).json({ error: "Credenciales incorrectas" });
         }
         const rol = usuarios[0].rol;
+        const cajaId = usuarios[0].cajaId;
         const token = generateToken({ id: usuarios.id, usuario: usuarios.usuario });
-        res.json({ token, rol });
+        res.json({ token, rol, cajaId });
     } catch (error) {
         console.error("Error al autenticar:", error);
         res.status(500).json({ error: "Error interno del servidor" });

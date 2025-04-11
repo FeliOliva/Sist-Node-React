@@ -41,6 +41,48 @@ const getVentas = async (limitNumber, pageNumber) => {
     }
 };
 
+const getVentasByNegocioId = async (negocioId, cajaId) => {
+    try {
+        const ventas = await prisma.venta.findMany({
+            where: {
+                negocioId: parseInt(negocioId),
+                cajaId: parseInt(cajaId),
+            },
+            include: {
+                cliente: {
+                    select: { nombre: true, apellido: true }
+                },
+                negocio: {
+                    select: { nombre: true }
+                },
+                caja: {
+                    select: { nombre: true }
+                },
+                detalles: {
+                    include: {
+                        producto: true
+                    }
+                }
+            }
+        });
+
+        const totalVentas = await prisma.venta.count({
+            where: {
+                negocioId: parseInt(negocioId),
+                cajaId: parseInt(cajaId),
+            }
+        });
+
+        return {
+            ventas,
+            total: totalVentas,
+        };
+
+    } catch (error) {
+        console.error("Error al obtener las ventas por negocio y caja:", error);
+        throw new Error("Error al obtener las ventas por negocio y caja");
+    }
+}
 
 
 const getVentaById = async (id) => {
@@ -69,7 +111,7 @@ const getVentasByCliente = async (clienteId, limit, page, startDate, endDate, ca
             ...(filterStartDate && { fechaCreacion: { gte: filterStartDate.toISOString() } }),
             ...(filterEndDate && { fechaCreacion: { lte: filterEndDate.toISOString() } }),
             ...(cajaId && { cajaId: parseInt(cajaId) })
-          };
+        };
         const ventas = await prisma.venta.findMany({
             where: whereClause,
             skip: offset,
@@ -129,7 +171,7 @@ const getVentasByNegocio = async (negocioId, limit, page, startDate, endDate, ca
             ...(filterStartDate && { fechaCreacion: { gte: filterStartDate.toISOString() } }),
             ...(filterEndDate && { fechaCreacion: { lte: filterEndDate.toISOString() } }),
             ...(cajaId && { cajaId: parseInt(cajaId) })
-          };
+        };
         const ventas = await prisma.venta.findMany({
             where: whereClause,
             skip: offset,
@@ -271,4 +313,4 @@ const dropVenta = async (id) => {
 
 
 
-module.exports = { getVentas, getVentaById, dropVenta, addVenta, getVentasByCliente, getVentasByNegocio, updateVenta };
+module.exports = { getVentas, getVentaById, dropVenta, addVenta, getVentasByCliente, getVentasByNegocio, updateVenta, getVentasByNegocioId };

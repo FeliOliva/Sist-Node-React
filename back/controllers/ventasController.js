@@ -42,6 +42,25 @@ const getVentaById = async (req, res) => {
     }
 }
 
+const getVentasByNegocioId = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { cajaId } = req.query;
+        if (!id) {
+            return res.status(400).json({ error: "El id es obligatorio" });
+        }
+        if (!cajaId) {
+            return res.status(400).json({ error: "El id de la caja es obligatorio" });
+        }
+        const ventaData = await ventaModel.getVentasByNegocioId(id, cajaId);
+        res.status(200).json(ventaData);
+    } catch (error) {
+        console.error("Error al obtener la venta por negocio:", error);
+        res.status(500).json({ error: "Error al obtener la venta por negocio" });
+    }
+}
+
+
 const getVentasByCliente = async (req, res) => {
     try {
         const { clienteId } = req.params;
@@ -188,4 +207,4 @@ const dropVenta = async (req, res) => {
 }
 
 
-module.exports = { getVentas, getVentaById, addVenta, dropVenta, getVentasByCliente, getVentasByNegocio };
+module.exports = { getVentas, getVentaById, addVenta, dropVenta, getVentasByCliente, getVentasByNegocio, getVentasByNegocioId };

@@ -36,6 +36,16 @@ const getNegocios = async (req, res) => {
     }
 };
 
+const getAllNegocios = async (req, res) => {
+    try {
+        const negociosData = await negocioModel.getAllNegocios()
+        res.status(200).json(negociosData);
+    } catch (error) {
+        console.error("Error al obtener los negocios:", error);
+        res.status(500).json({ error: "Error al obtener los negocios" });
+    }
+
+}
 const getNegocioById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -147,4 +157,4 @@ const upNegocio = async (req, res) => {
         res.status(500).json({ error: "Error al activar el negocio" });
     }
 }
-module.exports = { getAllNegociosByCliente, getNegocios, addNegocio, updateNegocio, deleteNegocio, upNegocio, getNegocioById };
+module.exports = { getAllNegociosByCliente, getNegocios, addNegocio, updateNegocio, deleteNegocio, upNegocio, getNegocioById, getAllNegocios };

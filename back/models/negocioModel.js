@@ -42,6 +42,20 @@ const getNegocios = async (limit, page) => {
         throw new Error("Error al obtener los negocios");
     }
 };
+const getAllNegocios = async () => {
+    try {
+        const negocios = await prisma.negocio.findMany();
+        const totalNegocios = await prisma.negocio.count();
+        return {
+            negocios,
+            total: totalNegocios,
+        };
+
+    } catch (error) {
+        console.error("Error consultando negocios:", error);
+        throw new Error("Error al obtener los negocios");
+    }
+}
 const getNegocioById = async (id) => {
     try {
         return await prisma.negocio.findUnique({ where: { id: parseInt(id) } });
@@ -79,4 +93,4 @@ const updateNegocioStatus = async (id, estado) => {
         throw error;
     }
 }
-module.exports = { getAllNegociosByCliente, getNegocios, addNegocio, updateNegocio, updateNegocioStatus, getNegocioById };
+module.exports = { getAllNegociosByCliente, getAllNegocios, getNegocios, addNegocio, updateNegocio, updateNegocioStatus, getNegocioById };
