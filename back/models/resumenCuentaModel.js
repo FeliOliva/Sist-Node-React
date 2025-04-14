@@ -69,8 +69,7 @@ const getResumenCuentaByNegocio = async (negocioId, startDate, endDate, cajaId) 
             clienteId: v.clienteId,
             numero: v.nroVenta,
             fecha: v.fechaCreacion,
-            total_con_descuento: v.total,
-            monto: null,
+            monto: v.total,
             metodo_pago: null,
         })),
         ...entregas.map(e => ({
@@ -79,7 +78,6 @@ const getResumenCuentaByNegocio = async (negocioId, startDate, endDate, cajaId) 
             clienteId: e.clienteId,
             numero: e.nroEntrega,
             fecha: e.fechaCreacion,
-            total_con_descuento: null,
             monto: e.monto,
             metodo_pago: e.metodoPago?.nombre || null,
         })),
@@ -89,8 +87,7 @@ const getResumenCuentaByNegocio = async (negocioId, startDate, endDate, cajaId) 
             clienteId: nc.clienteId,
             numero: null,
             fecha: nc.fechaCreacion,
-            total_con_descuento: nc.monto,
-            monto: null,
+            monto: nc.monto,
             metodo_pago: null,
         })),
     ];

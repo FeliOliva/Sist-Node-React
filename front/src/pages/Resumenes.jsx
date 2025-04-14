@@ -61,10 +61,6 @@ const VentasPorNegocio = () => {
       dataIndex: "tipo",
     },
     {
-      title: "ID",
-      dataIndex: "id",
-    },
-    {
       title: "Fecha",
       dataIndex: "fecha",
       render: (fecha) => dayjs(fecha).format("DD/MM/YYYY"),
