@@ -1,10 +1,27 @@
 -- CreateTable
+CREATE TABLE `Cheque` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `banco` VARCHAR(191) NOT NULL,
+    `nroCheque` VARCHAR(191) NOT NULL,
+    `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `fechaEmision` DATETIME(3) NOT NULL,
+    `fechaCobro` DATETIME(3) NOT NULL,
+    `monto` INTEGER NOT NULL,
+    `estado` INTEGER NOT NULL DEFAULT 1,
+    `negocioId` INTEGER NULL,
+
+    UNIQUE INDEX `Cheque_nroCheque_key`(`nroCheque`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `Negocio` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `nombre` VARCHAR(191) NOT NULL,
     `direccion` VARCHAR(191) NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
+    `clienteId` INTEGER NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -14,7 +31,7 @@ CREATE TABLE `Caja` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `nombre` VARCHAR(191) NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -24,7 +41,7 @@ CREATE TABLE `TipoUnidad` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `tipo` VARCHAR(191) NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -34,7 +51,7 @@ CREATE TABLE `MetodoPago` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `nombre` VARCHAR(191) NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -45,10 +62,9 @@ CREATE TABLE `Cliente` (
     `nombre` VARCHAR(191) NOT NULL,
     `apellido` VARCHAR(191) NOT NULL,
     `telefono` VARCHAR(191) NULL,
-    `editable` BOOLEAN NOT NULL,
+    `editable` INTEGER NOT NULL DEFAULT 1,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
-    `negocioId` INTEGER NULL,
+    `estado` INTEGER NOT NULL DEFAULT 1,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -60,29 +76,8 @@ CREATE TABLE `Usuario` (
     `password` VARCHAR(191) NOT NULL,
     `rol` INTEGER NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
     `cajaId` INTEGER NULL,
-
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `Rubro` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `nombre` VARCHAR(191) NOT NULL,
-    `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
-
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `SubRubro` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `nombre` VARCHAR(191) NOT NULL,
-    `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
-    `rubroId` INTEGER NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -92,10 +87,9 @@ CREATE TABLE `Producto` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `nombre` VARCHAR(191) NOT NULL,
     `precio` INTEGER NOT NULL,
+    `precioInicial` INTEGER NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
-    `rubroId` INTEGER NOT NULL,
-    `subRubroId` INTEGER NOT NULL,
+    `estado` INTEGER NOT NULL DEFAULT 1,
     `tipoUnidadId` INTEGER NULL,
 
     PRIMARY KEY (`id`)
@@ -108,7 +102,7 @@ CREATE TABLE `PrecioLog` (
     `fechaAntigua` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `precioNuevo` INTEGER NOT NULL,
     `fechaNueva` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
     `articuloId` INTEGER NOT NULL,
 
     PRIMARY KEY (`id`)
@@ -120,10 +114,8 @@ CREATE TABLE `Venta` (
     `nroVenta` VARCHAR(191) NOT NULL,
     `total` INTEGER NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
     `clienteId` INTEGER NULL,
     `negocioId` INTEGER NOT NULL,
-    `metodoPagoId` INTEGER NULL,
     `cajaId` INTEGER NULL,
 
     PRIMARY KEY (`id`)
@@ -136,7 +128,7 @@ CREATE TABLE `DetalleVenta` (
     `cantidad` INTEGER NOT NULL,
     `subTotal` INTEGER NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
+    `estado` INTEGER NOT NULL DEFAULT 1,
     `ventaId` INTEGER NOT NULL,
     `productoId` INTEGER NOT NULL,
 
@@ -149,10 +141,10 @@ CREATE TABLE `Entregas` (
     `nroEntrega` VARCHAR(191) NOT NULL,
     `monto` INTEGER NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
     `clienteId` INTEGER NOT NULL,
     `negocioId` INTEGER NOT NULL,
     `metodoPagoId` INTEGER NULL,
+    `cajaId` INTEGER NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -163,26 +155,21 @@ CREATE TABLE `NotaCredito` (
     `motivo` VARCHAR(191) NOT NULL,
     `monto` INTEGER NOT NULL,
     `fechaCreacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `estado` BOOLEAN NOT NULL DEFAULT true,
     `clienteId` INTEGER NOT NULL,
+    `negocioId` INTEGER NOT NULL,
+    `cajaId` INTEGER NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Cliente` ADD CONSTRAINT `Cliente_negocioId_fkey` FOREIGN KEY (`negocioId`) REFERENCES `Negocio`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Cheque` ADD CONSTRAINT `Cheque_negocioId_fkey` FOREIGN KEY (`negocioId`) REFERENCES `Negocio`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Negocio` ADD CONSTRAINT `Negocio_clienteId_fkey` FOREIGN KEY (`clienteId`) REFERENCES `Cliente`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Usuario` ADD CONSTRAINT `Usuario_cajaId_fkey` FOREIGN KEY (`cajaId`) REFERENCES `Caja`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `SubRubro` ADD CONSTRAINT `SubRubro_rubroId_fkey` FOREIGN KEY (`rubroId`) REFERENCES `Rubro`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Producto` ADD CONSTRAINT `Producto_rubroId_fkey` FOREIGN KEY (`rubroId`) REFERENCES `Rubro`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Producto` ADD CONSTRAINT `Producto_subRubroId_fkey` FOREIGN KEY (`subRubroId`) REFERENCES `SubRubro`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Producto` ADD CONSTRAINT `Producto_tipoUnidadId_fkey` FOREIGN KEY (`tipoUnidadId`) REFERENCES `TipoUnidad`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -197,13 +184,10 @@ ALTER TABLE `Venta` ADD CONSTRAINT `Venta_clienteId_fkey` FOREIGN KEY (`clienteI
 ALTER TABLE `Venta` ADD CONSTRAINT `Venta_negocioId_fkey` FOREIGN KEY (`negocioId`) REFERENCES `Negocio`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Venta` ADD CONSTRAINT `Venta_metodoPagoId_fkey` FOREIGN KEY (`metodoPagoId`) REFERENCES `MetodoPago`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `Venta` ADD CONSTRAINT `Venta_cajaId_fkey` FOREIGN KEY (`cajaId`) REFERENCES `Caja`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `DetalleVenta` ADD CONSTRAINT `DetalleVenta_ventaId_fkey` FOREIGN KEY (`ventaId`) REFERENCES `Venta`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `DetalleVenta` ADD CONSTRAINT `DetalleVenta_ventaId_fkey` FOREIGN KEY (`ventaId`) REFERENCES `Venta`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `DetalleVenta` ADD CONSTRAINT `DetalleVenta_productoId_fkey` FOREIGN KEY (`productoId`) REFERENCES `Producto`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -218,4 +202,13 @@ ALTER TABLE `Entregas` ADD CONSTRAINT `Entregas_negocioId_fkey` FOREIGN KEY (`ne
 ALTER TABLE `Entregas` ADD CONSTRAINT `Entregas_metodoPagoId_fkey` FOREIGN KEY (`metodoPagoId`) REFERENCES `MetodoPago`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Entregas` ADD CONSTRAINT `Entregas_cajaId_fkey` FOREIGN KEY (`cajaId`) REFERENCES `Caja`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `NotaCredito` ADD CONSTRAINT `NotaCredito_cajaId_fkey` FOREIGN KEY (`cajaId`) REFERENCES `Caja`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `NotaCredito` ADD CONSTRAINT `NotaCredito_clienteId_fkey` FOREIGN KEY (`clienteId`) REFERENCES `Cliente`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `NotaCredito` ADD CONSTRAINT `NotaCredito_negocioId_fkey` FOREIGN KEY (`negocioId`) REFERENCES `Negocio`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

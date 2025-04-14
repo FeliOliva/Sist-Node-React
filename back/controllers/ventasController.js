@@ -45,14 +45,21 @@ const getVentaById = async (req, res) => {
 const getVentasByNegocioId = async (req, res) => {
     try {
         const { id } = req.params;
-        const { cajaId } = req.query;
+        const { startDate, endDate, cajaId } = req.query;
         if (!id) {
             return res.status(400).json({ error: "El id es obligatorio" });
         }
         if (!cajaId) {
             return res.status(400).json({ error: "El id de la caja es obligatorio" });
         }
-        const ventaData = await ventaModel.getVentasByNegocioId(id, cajaId);
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: "Las fechas son obligatorias" });
+        }
+        const filterStartDate = new Date(startDate);
+        const filterEndDate = new Date(endDate);
+        filterStartDate.setHours(0, 0, 0, 0); // Ajustar la fecha inicial para incluir todo el día
+        filterEndDate.setHours(23, 59, 59, 999); // Ajustar la fecha final para incluir todo el día
+        const ventaData = await ventaModel.getVentasByNegocioId(id, cajaId, filterStartDate, filterEndDate);
         res.status(200).json(ventaData);
     } catch (error) {
         console.error("Error al obtener la venta por negocio:", error);

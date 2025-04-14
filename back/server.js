@@ -20,6 +20,7 @@ const entregaRoutes = require("./routes/entregasRoutes")
 const notasCreditoRoutes = require("./routes/notasCreditoRoutes");
 const tiposUnidadesRoutes = require("./routes/tiposUnidadesRoutes");
 const chequesRoutes = require("./routes/chequeRoutes");
+const resumenCuentaRoutes = require("./routes/resumenCuenta");
 
 
 app.use(cors({
@@ -63,7 +64,7 @@ app.post("/login", async (req, res) => {
 });
 
 
-app.use("/api", verifyToken, clientsRoutes, negociosRoutes, productsRoutes, ventaRoutes, precioLogRoutes, entregaRoutes, notasCreditoRoutes, tiposUnidadesRoutes, chequesRoutes);
+app.use("/api", verifyToken, resumenCuentaRoutes, clientsRoutes, negociosRoutes, productsRoutes, ventaRoutes, precioLogRoutes, entregaRoutes, notasCreditoRoutes, tiposUnidadesRoutes, chequesRoutes);
 
 
 app.listen(PORT, () => {

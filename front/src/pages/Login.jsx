@@ -21,16 +21,17 @@ const Login = () => {
         throw new Error(data.message || "Error en la autenticación");
 
       const now = new Date();
-      const expiryTime = now.getTime() + 60 * 60 * 1000; 
+      const expiryTime = now.getTime() + 60 * 60 * 1000;
 
-      
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("tokenExpiry", expiryTime);
       sessionStorage.setItem("rol", data.rol);
+      sessionStorage.setItem("cajaId", data.cajaId);
       setTimeout(() => {
         sessionStorage.removeItem("token");
         sessionStorage.removeItem("tokenExpiry");
         sessionStorage.removeItem("rol");
+        sessionStorage.removeItem("cajaId");
         message.info("Tu sesión ha expirado. Iniciá sesión nuevamente.");
         navigate("/login");
       }, 60 * 60 * 1000);

@@ -41,12 +41,16 @@ const getVentas = async (limitNumber, pageNumber) => {
     }
 };
 
-const getVentasByNegocioId = async (negocioId, cajaId) => {
+const getVentasByNegocioId = async (negocioId, cajaId, startDate, endDate) => {
     try {
         const ventas = await prisma.venta.findMany({
             where: {
                 negocioId: parseInt(negocioId),
                 cajaId: parseInt(cajaId),
+                fechaCreacion: {
+                    gte: startDate,
+                    lte: endDate,
+                },
             },
             include: {
                 cliente: {
@@ -70,6 +74,10 @@ const getVentasByNegocioId = async (negocioId, cajaId) => {
             where: {
                 negocioId: parseInt(negocioId),
                 cajaId: parseInt(cajaId),
+                fechaCreacion: {
+                    gte: startDate,
+                    lte: endDate,
+                }
             }
         });
 
@@ -82,8 +90,7 @@ const getVentasByNegocioId = async (negocioId, cajaId) => {
         console.error("Error al obtener las ventas por negocio y caja:", error);
         throw new Error("Error al obtener las ventas por negocio y caja");
     }
-}
-
+};
 
 const getVentaById = async (id) => {
     try {
