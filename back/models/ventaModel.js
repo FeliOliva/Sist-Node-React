@@ -94,12 +94,26 @@ const getVentasByNegocioId = async (negocioId, cajaId, startDate, endDate) => {
 
 const getVentaById = async (id) => {
     try {
-        return await prisma.venta.findUnique({ where: { id: parseInt(id) } });
+        return await prisma.venta.findUnique({
+            where: { id: parseInt(id) },
+            include: {
+                cliente: {
+                    select: { nombre: true, apellido: true },
+                },
+                detalles: {
+                    include: {
+                        producto: {
+                            select: { nombre: true },
+                        },
+                    },
+                },
+            },
+        });
     } catch (error) {
         console.error("Error consultando ventas:", error);
         throw new Error("Error al obtener la venta");
     }
-}
+};
 
 const getVentasByCliente = async (clienteId, limit, page, startDate, endDate, cajaId) => {
     try {
@@ -163,63 +177,58 @@ const getVentasByCliente = async (clienteId, limit, page, startDate, endDate, ca
 
 const getVentasByNegocio = async (negocioId, limit, page, startDate, endDate, cajaId) => {
     try {
+        if (!negocioId || isNaN(parseInt(negocioId))) {
+            throw new Error("NegocioId inválido o no proporcionado");
+        }
+
         limit = parseInt(limit) || 10;
         page = parseInt(page) || 1;
-
         const offset = (page - 1) * limit;
+
         const filterStartDate = startDate ? new Date(startDate) : null;
         const filterEndDate = endDate ? new Date(endDate) : null;
-
         if (filterEndDate) {
             filterEndDate.setHours(23, 59, 59, 999);
         }
+
         const whereClause = {
             negocioId: parseInt(negocioId),
-            ...(filterStartDate && { fechaCreacion: { gte: filterStartDate.toISOString() } }),
-            ...(filterEndDate && { fechaCreacion: { lte: filterEndDate.toISOString() } }),
             ...(cajaId && { cajaId: parseInt(cajaId) })
         };
+
+        const fechaCreacion = {};
+        if (filterStartDate) fechaCreacion.gte = filterStartDate;
+        if (filterEndDate) fechaCreacion.lte = filterEndDate;
+        if (Object.keys(fechaCreacion).length) {
+            whereClause.fechaCreacion = fechaCreacion;
+        }
+
         const ventas = await prisma.venta.findMany({
             where: whereClause,
             skip: offset,
             take: limit,
             include: {
-                cliente: {
-                    select: {
-                        nombre: true,
-                        apellido: true
-                    }
-                },
-                negocio: {
-                    select: {
-                        nombre: true
-                    }
-                },
-                caja: {
-                    select: {
-                        nombre: true
-                    }
-                },
-                detalles: {
-                    include: {
-                        producto: true
-                    }
-                }
+                cliente: { select: { nombre: true, apellido: true } },
+                negocio: { select: { nombre: true } },
+                caja: { select: { nombre: true } },
+                detalles: { include: { producto: true } }
             }
-        })
+        });
+
         const totalVentas = await prisma.venta.count({ where: whereClause });
+
         return {
             ventas,
             total: totalVentas,
             totalPages: Math.ceil(totalVentas / limit),
             currentPage: page
-        }
+        };
 
     } catch (error) {
-        console.error("Error al obtener la entrega por cliente:", error);
-        throw new Error("Error al obtener la entrega por cliente");
+        console.error("Error al obtener la venta por negocio:", error);
+        throw new Error("Error al obtener la venta por negocio");
     }
-}
+};
 
 const addVenta = async (data) => {
     try {
