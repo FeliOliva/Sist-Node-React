@@ -101,8 +101,17 @@ const Productos = () => {
     },
     {
       title: "Precio",
-      dataIndex: "precio",
-      key: "precio",
+      render: (_, record) => {
+        const precio = record.precioInicial || 0;
+        return (
+          <span>
+            {precio.toLocaleString("es-CL", {
+              style: "currency",
+              currency: "CLP",
+            })}
+          </span>
+        );
+      },
     },
     {
       title: "Acciones",
