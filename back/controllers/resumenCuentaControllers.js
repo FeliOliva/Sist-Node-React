@@ -25,7 +25,22 @@ const getResumenCuentaByNegocio = async (req, res) => {
         res.status(500).json({ error: 'Error al obtener el resumen de cuenta por negocio' });
     }
 }
+const resumenDia = async (req, res) => {
+    try {
+        const { cajaId } = req.query;
+        if (!cajaId) {
+            return res.status(400).json({ error: 'El ID de la caja es obligatorio' });
+        }
+        const cajaIdInt = parseInt(cajaId, 10);
 
+        const resumenData = await resumenCuentaModel.getResumenDia(cajaIdInt);
+        res.json(resumenData);
+    } catch (error) {
+        console.error('Error al obtener el resumen del día:', error);
+        res.status(500).json({ error: 'Error al obtener el resumen del día' });
+    }
+}
 module.exports = {
     getResumenCuentaByNegocio,
+    resumenDia
 };

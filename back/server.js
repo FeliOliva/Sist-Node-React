@@ -37,32 +37,40 @@ app.use((req, res, next) => {
 });
 
 
-// Ruta de login para generar un token
 app.post("/login", async (req, res) => {
-    const { usuario, password } = req.body;  // <-- Asegúrate de que los nombres coincidan con Postman
+    const { usuario, password } = req.body;
+
     if (!usuario || !password) {
         return res.status(400).json({ error: "Faltan datos en la solicitud" });
     }
-
     try {
-        const usuarios = await prisma.usuario.findMany();
-        console.log(usuarios)
-        if (!usuarios) {
+        // Buscar el usuario por nombre de usuario
+        const user = await prisma.usuario.findFirst({
+            where: { usuario },
+        });
+
+        console.log("Usuario encontrado:", user);
+
+        if (!user) {
             return res.status(401).json({ error: "Usuario no encontrado" });
         }
-        if (password !== usuarios[0].password) {
+
+        if (user.password !== password) {
             return res.status(401).json({ error: "Credenciales incorrectas" });
         }
-        const rol = usuarios[0].rol;
-        const cajaId = usuarios[0].cajaId;
-        const token = generateToken({ id: usuarios.id, usuario: usuarios.usuario });
-        res.json({ token, rol, cajaId });
+
+        const token = generateToken({ id: user.id, usuario: user.usuario });
+
+        res.json({
+            token,
+            rol: user.rol,
+            cajaId: user.cajaId,
+        });
     } catch (error) {
         console.error("Error al autenticar:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
-
 
 app.use("/api", verifyToken, resumenCuentaRoutes, clientsRoutes, negociosRoutes, productsRoutes, ventaRoutes, precioLogRoutes, entregaRoutes, notasCreditoRoutes, tiposUnidadesRoutes, chequesRoutes);
 

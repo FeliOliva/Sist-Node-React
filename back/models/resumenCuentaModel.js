@@ -111,6 +111,124 @@ const getResumenCuentaByNegocio = async (negocioId, startDate, endDate, cajaId) 
     return result;
 };
 
+const getResumenDia = async (cajaId) => {
+    const hoy = new Date();
+    const startDate = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0); // 00:00:00
+    const endDate = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59); // 23:59:59
+
+    const [ventas, entregas, notasCredito] = await Promise.all([
+        prisma.venta.findMany({
+            where: {
+                cajaId,
+                fechaCreacion: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+            select: {
+                id: true,
+                nroVenta: true,
+                total: true,
+                negocio: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                    },
+                },
+                detalles: {
+                    select: {
+                        id: true,
+                        cantidad: true,
+                        precio: true,
+                        subTotal: true,
+                        producto: {
+                            select: {
+                                nombre: true,
+                            },
+                        },
+                    },
+                },
+            },
+        }),
+
+        prisma.entregas.findMany({
+            where: {
+                cajaId,
+                fechaCreacion: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+            select: {
+                id: true,
+                monto: true,
+                nroEntrega: true,
+                metodoPago: {
+                    select: { nombre: true },
+                },
+                negocio: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                    },
+                },
+            },
+        }),
+
+        prisma.notaCredito.findMany({
+            where: {
+                cajaId,
+                fechaCreacion: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+            select: {
+                id: true,
+                monto: true,
+                motivo: true,
+                negocio: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                    },
+                },
+            },
+        }),
+    ]);
+
+    const result = [
+        ...ventas.map(v => ({
+            tipo: 'Venta',
+            id: v.id,
+            numero: v.nroVenta,
+            monto: v.total,
+            metodo_pago: null,
+            negocio: v.negocio,
+            detalles: v.detalles,
+        })),
+        ...entregas.map(e => ({
+            tipo: 'Entrega',
+            id: e.id,
+            numero: e.nroEntrega,
+            monto: e.monto,
+            metodo_pago: e.metodoPago?.nombre || null,
+            negocio: e.negocio,
+        })),
+        ...notasCredito.map(nc => ({
+            tipo: 'Nota de Crédito',
+            id: nc.id,
+            numero: null,
+            monto: nc.monto,
+            metodo_pago: null,
+            negocio: nc.negocio,
+        })),
+    ];
+
+    return result;
+};
+
 module.exports = {
     getResumenCuentaByNegocio,
+    getResumenDia,
 };
