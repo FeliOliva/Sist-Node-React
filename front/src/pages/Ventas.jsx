@@ -18,19 +18,19 @@ import {
   Tag,
   InputNumber,
   Row,
-  Col
+  Col,
 } from "antd";
 import { api } from "../services/api";
-import { 
-  EyeOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
-  ShoppingCartOutlined, 
-  SearchOutlined, 
-  PlusOutlined, 
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ShoppingCartOutlined,
+  SearchOutlined,
+  PlusOutlined,
   MinusOutlined,
   ShopOutlined,
-  UserOutlined
+  UserOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
@@ -46,8 +46,8 @@ const useIsMobile = () => {
     };
 
     checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    return () => window.removeEventListener('resize', checkScreenSize);
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
   return isMobile;
@@ -79,7 +79,7 @@ const Ventas = () => {
   const [detalleVenta, setDetalleVenta] = useState(null);
   const [modalTitle, setModalTitle] = useState("");
   const [modalContent, setModalContent] = useState(null);
-  
+
   // Estado para controlar si mostrar la lista de productos
   const [showProductList, setShowProductList] = useState(false);
 
@@ -87,7 +87,9 @@ const Ventas = () => {
   const fetchVentas = async (page = 1) => {
     try {
       setLoading(true);
-      const { ventas, total } = await api(`api/ventas?page=${page}&limit=${pageSize}`);
+      const { ventas, total } = await api(
+        `api/ventas?page=${page}&limit=${pageSize}`
+      );
 
       const clientesPromises = ventas.map((venta) =>
         api(`api/clientes/${venta.clienteId}`)
@@ -132,7 +134,7 @@ const Ventas = () => {
     const negociosArray = Array.isArray(res.negocios) ? res.negocios : [];
     setNegocios(negociosArray);
   };
-  
+
   const buscarProductos = async () => {
     try {
       setLoadingProducts(true);
@@ -170,8 +172,8 @@ const Ventas = () => {
     const yaExiste = productosSeleccionados.some((p) => p.id === producto.id);
     if (yaExiste) {
       // Actualizar la cantidad si ya existe
-      const nuevos = productosSeleccionados.map(p => 
-        p.id === producto.id 
+      const nuevos = productosSeleccionados.map((p) =>
+        p.id === producto.id
           ? { ...p, cantidad: p.cantidad + parseInt(cantidad) }
           : p
       );
@@ -199,12 +201,12 @@ const Ventas = () => {
   const modificarCantidad = (index, incremento) => {
     const nuevos = [...productosSeleccionados];
     const nuevaCantidad = nuevos[index].cantidad + incremento;
-    
+
     if (nuevaCantidad <= 0) {
       eliminarProducto(index);
       return;
     }
-    
+
     nuevos[index].cantidad = nuevaCantidad;
     setProductosSeleccionados(nuevos);
   };
@@ -214,7 +216,7 @@ const Ventas = () => {
       eliminarProducto(index);
       return;
     }
-    
+
     const nuevos = [...productosSeleccionados];
     nuevos[index].cantidad = nuevaCantidad;
     setProductosSeleccionados(nuevos);
@@ -263,14 +265,15 @@ const Ventas = () => {
         cantidad: producto.cantidad,
         productoId: parseInt(producto.id),
       }));
-
+      const cajaId = parseInt(sessionStorage.getItem("cajaId"));
+      const rolUsuario = parseInt(sessionStorage.getItem("rol"));
       const ventaData = {
         id: ventaEditando?.id,
         nroVenta,
         clienteId: parseInt(selectedCliente),
         negocioId: parseInt(selectedNegocio),
-        cajaId: 1,
-        rol_usuario: 0,
+        cajaId: cajaId,
+        rol_usuario: rolUsuario,
         detalles,
       };
 
@@ -351,30 +354,47 @@ const Ventas = () => {
     try {
       const venta = await api(`api/ventas/${record.id}`);
       const cliente = await api(`api/clientes/${venta.clienteId}`);
-      
+
       setDetalleVenta(venta);
       setModalTitle("Detalle de Venta");
       setModalContent(
         <div className="text-sm">
-          <p><strong>Nro Venta:</strong> {venta.nroVenta}</p>
-          <p><strong>Cliente:</strong> {cliente?.nombre} {cliente?.apellido}</p>
-          <p><strong>Negocio:</strong> {record.negocioNombre}</p>
-          <p><strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}</p>
-          <p><strong>Fecha:</strong> {dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}</p>
-          <p><strong>Productos:</strong></p>
+          <p>
+            <strong>Nro Venta:</strong> {venta.nroVenta}
+          </p>
+          <p>
+            <strong>Cliente:</strong> {cliente?.nombre} {cliente?.apellido}
+          </p>
+          <p>
+            <strong>Negocio:</strong> {record.negocioNombre}
+          </p>
+          <p>
+            <strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}
+          </p>
+          <p>
+            <strong>Fecha:</strong>{" "}
+            {dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}
+          </p>
+          <p>
+            <strong>Productos:</strong>
+          </p>
           <ul className="list-disc pl-5">
             {venta.detalles.map((d) => (
               <li key={d.id} className="mb-1">
-                {d.producto?.nombre || 'Producto'} - {d.cantidad} u. x ${d.precio.toLocaleString("es-AR")} = ${(d.precio * d.cantidad).toLocaleString("es-AR")}
+                {d.producto?.nombre || "Producto"} - {d.cantidad} u. x $
+                {d.precio.toLocaleString("es-AR")} = $
+                {(d.precio * d.cantidad).toLocaleString("es-AR")}
               </li>
             ))}
           </ul>
         </div>
       );
-      
+
       setDetalleModalVisible(true);
     } catch (error) {
-      message.error("Error al cargar los detalles de la venta: " + error.message);
+      message.error(
+        "Error al cargar los detalles de la venta: " + error.message
+      );
     }
   };
 
@@ -382,52 +402,52 @@ const Ventas = () => {
     {
       title: "Nro. Venta",
       dataIndex: "nroVenta",
-      key: "nroVenta"
+      key: "nroVenta",
     },
     {
       title: "Nombre",
       dataIndex: "nombre",
-      key: "nombre"
+      key: "nombre",
     },
     {
       title: "Apellido",
       dataIndex: "apellido",
       key: "apellido",
-      responsive: ["sm"]
+      responsive: ["sm"],
     },
     {
       title: "Negocio",
       dataIndex: "negocioNombre",
       key: "negocioNombre",
-      responsive: ["sm"]
+      responsive: ["sm"],
     },
     {
       title: "Total",
       dataIndex: "total",
       key: "total",
-      render: (total) => `$${total.toLocaleString("es-AR")}`
+      render: (total) => `$${total.toLocaleString("es-AR")}`,
     },
     {
       title: "Fecha",
       dataIndex: "fechaCreacion",
       key: "fechaCreacion",
       responsive: ["md"],
-      render: (fecha) => dayjs(fecha).format("DD/MM/YYYY")
+      render: (fecha) => dayjs(fecha).format("DD/MM/YYYY"),
     },
     {
       title: "Acciones",
       key: "acciones",
       render: (text, record) => (
         <Space size="small">
-          <Button 
-            size={isMobile ? "small" : "middle"} 
+          <Button
+            size={isMobile ? "small" : "middle"}
             icon={<EyeOutlined />}
             onClick={() => handleVerDetalle(record)}
           >
             {!isMobile && "Ver"}
           </Button>
-          <Button 
-            size={isMobile ? "small" : "middle"} 
+          <Button
+            size={isMobile ? "small" : "middle"}
             icon={<EditOutlined />}
             onClick={() => editarVenta(record)}
           >
@@ -466,7 +486,12 @@ const Ventas = () => {
       }}
     >
       <List.Item.Meta
-        avatar={<Avatar icon={<ShoppingCartOutlined />} style={{ backgroundColor: '#1890ff' }} />}
+        avatar={
+          <Avatar
+            icon={<ShoppingCartOutlined />}
+            style={{ backgroundColor: "#1890ff" }}
+          />
+        }
         title={item.nombre}
         description={
           <Space>
@@ -475,11 +500,7 @@ const Ventas = () => {
           </Space>
         }
       />
-      <Button 
-        type="primary" 
-        size="small" 
-        icon={<PlusOutlined />}
-      >
+      <Button type="primary" size="small" icon={<PlusOutlined />}>
         Agregar
       </Button>
     </List.Item>
@@ -487,18 +508,17 @@ const Ventas = () => {
 
   // Renderizado de cada producto en el carrito
   const renderCartItem = (item, index) => (
-    <List.Item
-      key={item.id}
-      style={{ padding: "12px" }}
-    >
+    <List.Item key={item.id} style={{ padding: "12px" }}>
       <div style={{ width: "100%" }}>
-        <div style={{ 
-          fontWeight: "bold", 
-          marginBottom: "6px", 
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
+        <div
+          style={{
+            fontWeight: "bold",
+            marginBottom: "6px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div style={{ wordBreak: "break-word" }}>{item.nombre}</div>
           <Button
             danger
@@ -509,20 +529,23 @@ const Ventas = () => {
             Eliminar
           </Button>
         </div>
-        
+
         <div style={{ color: "#666", marginBottom: "6px" }}>
-          {item.tipoUnidad || "Unidad"} - ${item.precio.toLocaleString("es-AR")} c/u
+          {item.tipoUnidad || "Unidad"} - ${item.precio.toLocaleString("es-AR")}{" "}
+          c/u
         </div>
-        
-        <div style={{ 
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center" }}>
-            <Button 
-              size="small" 
-              icon={<MinusOutlined />} 
+            <Button
+              size="small"
+              icon={<MinusOutlined />}
               onClick={() => modificarCantidad(index, -1)}
             />
             <InputNumber
@@ -532,9 +555,9 @@ const Ventas = () => {
               size="small"
               style={{ width: "60px", margin: "0 4px" }}
             />
-            <Button 
-              size="small" 
-              icon={<PlusOutlined />} 
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
               onClick={() => modificarCantidad(index, 1)}
             />
           </div>
@@ -547,7 +570,10 @@ const Ventas = () => {
   );
 
   return (
-    <div className="responsive-container" style={{ width: "100%", overflowX: "auto" }}>
+    <div
+      className="responsive-container"
+      style={{ width: "100%", overflowX: "auto" }}
+    >
       <Button
         type="primary"
         onClick={() => {
@@ -583,7 +609,9 @@ const Ventas = () => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center" }}>
-            <ShoppingCartOutlined style={{ fontSize: 20, marginRight: 8, color: "#1890ff" }} />
+            <ShoppingCartOutlined
+              style={{ fontSize: 20, marginRight: 8, color: "#1890ff" }}
+            />
             <span>{ventaEditando ? "Editar Venta" : "Nueva Venta"}</span>
           </div>
         }
@@ -611,26 +639,36 @@ const Ventas = () => {
         ]}
         width={isMobile ? "95%" : "800px"}
         style={{ maxWidth: "800px", top: isMobile ? 20 : 100 }}
-        bodyStyle={{ padding: "12px", maxHeight: isMobile ? "80vh" : "auto", overflowY: "auto" }}
+        bodyStyle={{
+          padding: "12px",
+          maxHeight: isMobile ? "80vh" : "auto",
+          overflowY: "auto",
+        }}
       >
         <Form layout="vertical">
           {/* Sección de Datos del Cliente */}
-          <div style={{ background: "#f5f5f5", padding: "12px", borderRadius: "8px", marginBottom: "12px" }}>
-            <h3 style={{ 
-              marginTop: 0, 
-              marginBottom: "12px", 
-              fontSize: isMobile ? 16 : 18,
-              display: "flex",
-              alignItems: "center"
-            }}>
+          <div
+            style={{
+              background: "#f5f5f5",
+              padding: "12px",
+              borderRadius: "8px",
+              marginBottom: "12px",
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: "12px",
+                fontSize: isMobile ? 16 : 18,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <UserOutlined style={{ marginRight: 8 }} />
               Datos del Cliente
             </h3>
-            
-            <Form.Item 
-              label="Cliente" 
-              style={{ marginBottom: 12 }}
-            >
+
+            <Form.Item label="Cliente" style={{ marginBottom: 12 }}>
               <Select
                 placeholder="Seleccionar cliente"
                 value={selectedCliente}
@@ -652,10 +690,7 @@ const Ventas = () => {
               </Select>
             </Form.Item>
 
-            <Form.Item 
-              label="Negocio" 
-              style={{ marginBottom: 0 }}
-            >
+            <Form.Item label="Negocio" style={{ marginBottom: 0 }}>
               <Select
                 placeholder="Seleccionar negocio"
                 value={selectedNegocio}
@@ -675,26 +710,38 @@ const Ventas = () => {
           </div>
 
           {/* Sección de Agregar Productos */}
-          <div style={{ background: "#f6f9ff", padding: "12px", borderRadius: "8px", marginBottom: "12px" }}>
-            <h3 style={{ 
-              marginTop: 0, 
-              marginBottom: "12px", 
-              fontSize: isMobile ? 16 : 18,
-              display: "flex",
-              alignItems: "center"
-            }}>
+          <div
+            style={{
+              background: "#f6f9ff",
+              padding: "12px",
+              borderRadius: "8px",
+              marginBottom: "12px",
+            }}
+          >
+            <h3
+              style={{
+                marginTop: 0,
+                marginBottom: "12px",
+                fontSize: isMobile ? 16 : 18,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <ShoppingCartOutlined style={{ marginRight: 8 }} />
               Agregar Productos
             </h3>
-            
-            <Form.Item label="Buscar y Agregar Productos" style={{ marginBottom: 8 }}>
+
+            <Form.Item
+              label="Buscar y Agregar Productos"
+              style={{ marginBottom: 8 }}
+            >
               <Row gutter={[8, 8]}>
                 <Col span={isMobile ? 16 : 18}>
                   <Input
                     placeholder="Buscar producto"
                     value={productoBuscado}
                     onChange={(e) => setProductoBuscado(e.target.value)}
-                    prefix={<SearchOutlined style={{ color: '#1890ff' }} />}
+                    prefix={<SearchOutlined style={{ color: "#1890ff" }} />}
                     style={{ width: "100%" }}
                     size={isMobile ? "middle" : "large"}
                   />
@@ -710,15 +757,15 @@ const Ventas = () => {
                   />
                 </Col>
               </Row>
-              
+
               {showProductList && (
-                <Card 
-                  size="small" 
-                  style={{ 
-                    marginTop: 8, 
-                    maxHeight: 200, 
+                <Card
+                  size="small"
+                  style={{
+                    marginTop: 8,
+                    maxHeight: 200,
                     overflow: "auto",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                   }}
                   bodyStyle={{ padding: 0 }}
                 >
@@ -727,7 +774,9 @@ const Ventas = () => {
                     renderItem={renderProductItem}
                     loading={loadingProducts}
                     locale={{
-                      emptyText: <Empty description="No se encontraron productos" />
+                      emptyText: (
+                        <Empty description="No se encontraron productos" />
+                      ),
                     }}
                     size="small"
                   />
@@ -737,36 +786,50 @@ const Ventas = () => {
           </div>
 
           {/* Sección de Carrito de Productos */}
-          <div style={{ background: "#f7f7f7", padding: "12px", borderRadius: "8px" }}>
-            <div style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center", 
-              marginBottom: 12 
-            }}>
-              <h3 style={{ 
-                margin: 0, 
-                fontSize: isMobile ? 16 : 18,
+          <div
+            style={{
+              background: "#f7f7f7",
+              padding: "12px",
+              borderRadius: "8px",
+            }}
+          >
+            <div
+              style={{
                 display: "flex",
-                alignItems: "center"
-              }}>
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: isMobile ? 16 : 18,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
                 <ShoppingCartOutlined style={{ marginRight: 8 }} />
                 Carrito de Productos
               </h3>
-              <Badge 
-                count={productosSeleccionados.length} 
-                style={{ backgroundColor: productosSeleccionados.length ? "#1890ff" : "#d9d9d9" }}
+              <Badge
+                count={productosSeleccionados.length}
+                style={{
+                  backgroundColor: productosSeleccionados.length
+                    ? "#1890ff"
+                    : "#d9d9d9",
+                }}
               />
             </div>
-            
+
             {productosSeleccionados.length > 0 ? (
               <>
                 <Card
                   size="small"
-                  style={{ 
+                  style={{
                     boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
                     maxHeight: isMobile ? 250 : 300,
-                    overflow: "auto"
+                    overflow: "auto",
                   }}
                   bodyStyle={{ padding: 0 }}
                 >
@@ -776,30 +839,34 @@ const Ventas = () => {
                     size="small"
                   />
                 </Card>
-                
+
                 <Divider style={{ margin: "12px 0 8px 0" }} />
-                
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "flex-end", 
-                  alignItems: "center",
-                  background: "#e6f7ff", 
-                  padding: "10px", 
-                  borderRadius: "6px"
-                }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: "bold", 
-                    color: "#1890ff"
-                  }}>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    background: "#e6f7ff",
+                    padding: "10px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      color: "#1890ff",
+                    }}
+                  >
                     Total: ${total.toLocaleString("es-AR")}
                   </div>
                 </div>
               </>
             ) : (
-              <Empty 
-                description="No hay productos en el carrito" 
-                image={Empty.PRESENTED_IMAGE_SIMPLE} 
+              <Empty
+                description="No hay productos en el carrito"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             )}
           </div>
