@@ -9,8 +9,30 @@ import {
   Form,
   Space,
   List,
+  Drawer,
+  Card,
+  Badge,
+  Divider,
+  Avatar,
+  Empty,
+  Tag,
+  InputNumber,
+  Row,
+  Col
 } from "antd";
 import { api } from "../services/api";
+import { 
+  EyeOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  ShoppingCartOutlined, 
+  SearchOutlined, 
+  PlusOutlined, 
+  MinusOutlined,
+  ShopOutlined,
+  UserOutlined
+} from "@ant-design/icons";
+import dayjs from "dayjs";
 
 const { Option } = Select;
 
@@ -20,16 +42,11 @@ const useIsMobile = () => {
 
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768); // 768px es generalmente el breakpoint para dispositivos móviles
+      setIsMobile(window.innerWidth < 768);
     };
 
-    // Verificar al inicio
     checkScreenSize();
-
-    // Escuchar cambios de tamaño de ventana
     window.addEventListener('resize', checkScreenSize);
-
-    // Limpiar el listener cuando el componente se desmonta
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
@@ -55,7 +72,18 @@ const Ventas = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(8);
   const [totalVentas, setTotalVentas] = useState(0);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
+  // Estados para mostrar detalles de venta
+  const [detalleModalVisible, setDetalleModalVisible] = useState(false);
+  const [detalleVenta, setDetalleVenta] = useState(null);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalContent, setModalContent] = useState(null);
+  
+  // Estado para controlar si mostrar la lista de productos
+  const [showProductList, setShowProductList] = useState(false);
+
+  // Resto de funciones sin cambios...
   const fetchVentas = async (page = 1) => {
     try {
       setLoading(true);
@@ -107,17 +135,20 @@ const Ventas = () => {
   
   const buscarProductos = async () => {
     try {
+      setLoadingProducts(true);
       const res = await api("api/getAllProducts");
       const productos = res.products || [];
-      console.log(productos);
       // Filtrar en el frontend por coincidencia de nombre
       const filtrados = productos.filter((producto) =>
         producto.nombre.toLowerCase().includes(productoBuscado.toLowerCase())
       );
 
       setProductosDisponibles(filtrados);
+      setShowProductList(filtrados.length > 0);
     } catch (err) {
       message.error("Error al buscar productos: " + err.message);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -126,31 +157,67 @@ const Ventas = () => {
       buscarProductos();
     } else {
       setProductosDisponibles([]);
+      setShowProductList(false);
     }
   }, [productoBuscado]);
 
   const agregarProducto = (producto) => {
-    if (!cantidad || cantidad <= 0) return;
-
-    const yaExiste = productosSeleccionados.some((p) => p.id === producto.id);
-    if (yaExiste) {
-      message.warning("Este producto ya fue agregado.");
+    if (!cantidad || cantidad <= 0) {
+      message.warning("La cantidad debe ser mayor a 0");
       return;
     }
 
-    setProductosSeleccionados([
-      ...productosSeleccionados,
-      {
-        ...producto,
-        cantidad: parseInt(cantidad),
-        tipoUnidad: producto.tipoUnidad?.tipo || "Unidad", // Guardar unidad
-      },
-    ]);
+    const yaExiste = productosSeleccionados.some((p) => p.id === producto.id);
+    if (yaExiste) {
+      // Actualizar la cantidad si ya existe
+      const nuevos = productosSeleccionados.map(p => 
+        p.id === producto.id 
+          ? { ...p, cantidad: p.cantidad + parseInt(cantidad) }
+          : p
+      );
+      setProductosSeleccionados(nuevos);
+      message.success(`Se actualizó la cantidad de ${producto.nombre}`);
+    } else {
+      setProductosSeleccionados([
+        ...productosSeleccionados,
+        {
+          ...producto,
+          cantidad: parseInt(cantidad),
+          tipoUnidad: producto.tipoUnidad?.tipo || "Unidad",
+        },
+      ]);
+      message.success(`${producto.nombre} agregado al carrito`);
+    }
 
     setProductoBuscado("");
     setCantidad(1);
     setUnidadSeleccionada("");
     setProductosDisponibles([]);
+    setShowProductList(false);
+  };
+
+  const modificarCantidad = (index, incremento) => {
+    const nuevos = [...productosSeleccionados];
+    const nuevaCantidad = nuevos[index].cantidad + incremento;
+    
+    if (nuevaCantidad <= 0) {
+      eliminarProducto(index);
+      return;
+    }
+    
+    nuevos[index].cantidad = nuevaCantidad;
+    setProductosSeleccionados(nuevos);
+  };
+
+  const actualizarCantidad = (index, nuevaCantidad) => {
+    if (nuevaCantidad <= 0) {
+      eliminarProducto(index);
+      return;
+    }
+    
+    const nuevos = [...productosSeleccionados];
+    nuevos[index].cantidad = nuevaCantidad;
+    setProductosSeleccionados(nuevos);
   };
 
   const eliminarProducto = (index) => {
@@ -198,7 +265,7 @@ const Ventas = () => {
       }));
 
       const ventaData = {
-        id: ventaEditando?.id, // solo si estás editando
+        id: ventaEditando?.id,
         nroVenta,
         clienteId: parseInt(selectedCliente),
         negocioId: parseInt(selectedNegocio),
@@ -227,7 +294,7 @@ const Ventas = () => {
 
   const editarVenta = async (venta) => {
     try {
-      await fetchClientes(); // para mostrar todos los clientes
+      await fetchClientes();
 
       const cliente = await api(`api/clientes/${venta.clienteId}`);
       const negocios = await api(`api/negocio/${venta.clienteId}`);
@@ -273,9 +340,41 @@ const Ventas = () => {
     try {
       await api(`api/ventas/${id}`, "DELETE");
       message.success("Venta eliminada correctamente");
-      setVentas((prev) => prev.filter((venta) => venta.id !== id)); // actualiza el estado local
+      setVentas((prev) => prev.filter((venta) => venta.id !== id));
     } catch (error) {
       message.error("Error al eliminar la venta: " + error.message);
+    }
+  };
+
+  // Ver detalle de venta
+  const handleVerDetalle = async (record) => {
+    try {
+      const venta = await api(`api/ventas/${record.id}`);
+      const cliente = await api(`api/clientes/${venta.clienteId}`);
+      
+      setDetalleVenta(venta);
+      setModalTitle("Detalle de Venta");
+      setModalContent(
+        <div className="text-sm">
+          <p><strong>Nro Venta:</strong> {venta.nroVenta}</p>
+          <p><strong>Cliente:</strong> {cliente?.nombre} {cliente?.apellido}</p>
+          <p><strong>Negocio:</strong> {record.negocioNombre}</p>
+          <p><strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}</p>
+          <p><strong>Fecha:</strong> {dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}</p>
+          <p><strong>Productos:</strong></p>
+          <ul className="list-disc pl-5">
+            {venta.detalles.map((d) => (
+              <li key={d.id} className="mb-1">
+                {d.producto?.nombre || 'Producto'} - {d.cantidad} u. x ${d.precio.toLocaleString("es-AR")} = ${(d.precio * d.cantidad).toLocaleString("es-AR")}
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+      
+      setDetalleModalVisible(true);
+    } catch (error) {
+      message.error("Error al cargar los detalles de la venta: " + error.message);
     }
   };
 
@@ -294,34 +393,50 @@ const Ventas = () => {
       title: "Apellido",
       dataIndex: "apellido",
       key: "apellido",
-      responsive: ["sm"] // Solo visible en pantallas sm y superiores
+      responsive: ["sm"]
     },
     {
       title: "Negocio",
       dataIndex: "negocioNombre",
       key: "negocioNombre",
-      responsive: ["sm"] // Solo visible en pantallas sm y superiores
+      responsive: ["sm"]
     },
     {
       title: "Total",
       dataIndex: "total",
-      key: "total"
+      key: "total",
+      render: (total) => `$${total.toLocaleString("es-AR")}`
     },
     {
       title: "Fecha",
       dataIndex: "fechaCreacion",
       key: "fechaCreacion",
-      responsive: ["md"] // Solo visible en pantallas md y superiores
+      responsive: ["md"],
+      render: (fecha) => dayjs(fecha).format("DD/MM/YYYY")
     },
     {
       title: "Acciones",
       key: "acciones",
       render: (text, record) => (
         <Space size="small">
-          <Button size={isMobile ? "small" : "middle"} onClick={() => editarVenta(record)}>Editar</Button>
+          <Button 
+            size={isMobile ? "small" : "middle"} 
+            icon={<EyeOutlined />}
+            onClick={() => handleVerDetalle(record)}
+          >
+            {!isMobile && "Ver"}
+          </Button>
+          <Button 
+            size={isMobile ? "small" : "middle"} 
+            icon={<EditOutlined />}
+            onClick={() => editarVenta(record)}
+          >
+            {!isMobile && "Editar"}
+          </Button>
           <Button
             size={isMobile ? "small" : "middle"}
             danger
+            icon={<DeleteOutlined />}
             onClick={() => {
               Modal.confirm({
                 title: "¿Estás seguro?",
@@ -333,12 +448,103 @@ const Ventas = () => {
               });
             }}
           >
-            Eliminar
+            {!isMobile && "Eliminar"}
           </Button>
         </Space>
       ),
     },
   ];
+
+  // Renderizado de cada producto en la lista de búsqueda
+  const renderProductItem = (item) => (
+    <List.Item
+      key={item.id}
+      style={{ cursor: "pointer", padding: "8px 12px" }}
+      onClick={() => {
+        setUnidadSeleccionada(item.tipoUnidad?.tipo || "Unidad");
+        agregarProducto(item);
+      }}
+    >
+      <List.Item.Meta
+        avatar={<Avatar icon={<ShoppingCartOutlined />} style={{ backgroundColor: '#1890ff' }} />}
+        title={item.nombre}
+        description={
+          <Space>
+            <Tag color="blue">{item.tipoUnidad?.tipo || "Unidad"}</Tag>
+            <Tag color="green">${item.precio.toLocaleString("es-AR")}</Tag>
+          </Space>
+        }
+      />
+      <Button 
+        type="primary" 
+        size="small" 
+        icon={<PlusOutlined />}
+      >
+        Agregar
+      </Button>
+    </List.Item>
+  );
+
+  // Renderizado de cada producto en el carrito
+  const renderCartItem = (item, index) => (
+    <List.Item
+      key={item.id}
+      style={{ padding: "12px" }}
+    >
+      <div style={{ width: "100%" }}>
+        <div style={{ 
+          fontWeight: "bold", 
+          marginBottom: "6px", 
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <div style={{ wordBreak: "break-word" }}>{item.nombre}</div>
+          <Button
+            danger
+            size="small"
+            onClick={() => eliminarProducto(index)}
+            icon={<DeleteOutlined />}
+          >
+            Eliminar
+          </Button>
+        </div>
+        
+        <div style={{ color: "#666", marginBottom: "6px" }}>
+          {item.tipoUnidad || "Unidad"} - ${item.precio.toLocaleString("es-AR")} c/u
+        </div>
+        
+        <div style={{ 
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <Button 
+              size="small" 
+              icon={<MinusOutlined />} 
+              onClick={() => modificarCantidad(index, -1)}
+            />
+            <InputNumber
+              min={1}
+              value={item.cantidad}
+              onChange={(value) => actualizarCantidad(index, value)}
+              size="small"
+              style={{ width: "60px", margin: "0 4px" }}
+            />
+            <Button 
+              size="small" 
+              icon={<PlusOutlined />} 
+              onClick={() => modificarCantidad(index, 1)}
+            />
+          </div>
+          <div style={{ fontWeight: "bold", color: "#1890ff" }}>
+            ${(item.precio * item.cantidad).toLocaleString("es-AR")}
+          </div>
+        </div>
+      </div>
+    </List.Item>
+  );
 
   return (
     <div className="responsive-container" style={{ width: "100%", overflowX: "auto" }}>
@@ -348,6 +554,8 @@ const Ventas = () => {
           fetchClientes();
           setModalVisible(true);
         }}
+        icon={<PlusOutlined />}
+        style={{ marginBottom: 20 }}
       >
         Registrar Venta
       </Button>
@@ -371,8 +579,14 @@ const Ventas = () => {
         scroll={{ x: "max-content" }}
       />
 
+      {/* Modal para crear/editar venta con estética mejorada y adaptada para móvil */}
       <Modal
-        title="Nueva Venta"
+        title={
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <ShoppingCartOutlined style={{ fontSize: 20, marginRight: 8, color: "#1890ff" }} />
+            <span>{ventaEditando ? "Editar Venta" : "Nueva Venta"}</span>
+          </div>
+        }
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
@@ -390,108 +604,230 @@ const Ventas = () => {
             type="primary"
             onClick={guardarVenta}
             loading={isSaving}
+            icon={<ShoppingCartOutlined />}
           >
-            Guardar Venta
+            {ventaEditando ? "Actualizar" : "Finalizar"}
           </Button>,
         ]}
-        width={isMobile ? "95%" : "700px"}
-        style={{ maxWidth: "700px" }}
+        width={isMobile ? "95%" : "800px"}
+        style={{ maxWidth: "800px", top: isMobile ? 20 : 100 }}
+        bodyStyle={{ padding: "12px", maxHeight: isMobile ? "80vh" : "auto", overflowY: "auto" }}
       >
         <Form layout="vertical">
-          <Form.Item label="Cliente">
-            <Select
-              placeholder="Seleccionar cliente"
-              value={selectedCliente}
-              onChange={(val) => {
-                setSelectedCliente(val);
-                setSelectedNegocio(null);
-                fetchNegocios(val);
-              }}
+          {/* Sección de Datos del Cliente */}
+          <div style={{ background: "#f5f5f5", padding: "12px", borderRadius: "8px", marginBottom: "12px" }}>
+            <h3 style={{ 
+              marginTop: 0, 
+              marginBottom: "12px", 
+              fontSize: isMobile ? 16 : 18,
+              display: "flex",
+              alignItems: "center"
+            }}>
+              <UserOutlined style={{ marginRight: 8 }} />
+              Datos del Cliente
+            </h3>
+            
+            <Form.Item 
+              label="Cliente" 
+              style={{ marginBottom: 12 }}
             >
-              {clientes.map((client) => (
-                <Option key={client.id} value={client.id}>
-                  {client.nombre} {client.apellido}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+              <Select
+                placeholder="Seleccionar cliente"
+                value={selectedCliente}
+                onChange={(val) => {
+                  setSelectedCliente(val);
+                  setSelectedNegocio(null);
+                  fetchNegocios(val);
+                }}
+                style={{ width: "100%" }}
+                size={isMobile ? "middle" : "large"}
+                showSearch
+                optionFilterProp="children"
+              >
+                {clientes.map((client) => (
+                  <Option key={client.id} value={client.id}>
+                    {client.nombre} {client.apellido}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
 
-          <Form.Item label="Negocio">
-            <Select
-              placeholder="Seleccionar negocio"
-              value={selectedNegocio}
-              onChange={(val) => setSelectedNegocio(val)}
-              disabled={!negocios.length}
+            <Form.Item 
+              label="Negocio" 
+              style={{ marginBottom: 0 }}
             >
-              {negocios.map((negocio) => (
-                <Option key={negocio.id} value={negocio.id}>
-                  {negocio.nombre}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+              <Select
+                placeholder="Seleccionar negocio"
+                value={selectedNegocio}
+                onChange={(val) => setSelectedNegocio(val)}
+                disabled={!negocios.length}
+                style={{ width: "100%" }}
+                size={isMobile ? "middle" : "large"}
+                suffixIcon={<ShopOutlined />}
+              >
+                {negocios.map((negocio) => (
+                  <Option key={negocio.id} value={negocio.id}>
+                    {negocio.nombre}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </div>
 
-          <Form.Item label="Buscar Producto">
-            <Space.Compact style={{ width: "100%" }}>
-              <Input
-                placeholder="Buscar producto"
-                value={productoBuscado}
-                onChange={(e) => setProductoBuscado(e.target.value)}
-              />
-              <Input
-                type="number"
-                min={1}
-                value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
-                style={{ width: 100 }}
-              />
-            </Space.Compact>
-            <List
-              bordered
-              dataSource={productosDisponibles}
-              renderItem={(item) => (
-                <List.Item
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    setUnidadSeleccionada(item.tipoUnidad?.tipo || "Unidad");
-                    agregarProducto(item);
+          {/* Sección de Agregar Productos */}
+          <div style={{ background: "#f6f9ff", padding: "12px", borderRadius: "8px", marginBottom: "12px" }}>
+            <h3 style={{ 
+              marginTop: 0, 
+              marginBottom: "12px", 
+              fontSize: isMobile ? 16 : 18,
+              display: "flex",
+              alignItems: "center"
+            }}>
+              <ShoppingCartOutlined style={{ marginRight: 8 }} />
+              Agregar Productos
+            </h3>
+            
+            <Form.Item label="Buscar y Agregar Productos" style={{ marginBottom: 8 }}>
+              <Row gutter={[8, 8]}>
+                <Col span={isMobile ? 16 : 18}>
+                  <Input
+                    placeholder="Buscar producto"
+                    value={productoBuscado}
+                    onChange={(e) => setProductoBuscado(e.target.value)}
+                    prefix={<SearchOutlined style={{ color: '#1890ff' }} />}
+                    style={{ width: "100%" }}
+                    size={isMobile ? "middle" : "large"}
+                  />
+                </Col>
+                <Col span={isMobile ? 8 : 6}>
+                  <InputNumber
+                    min={1}
+                    value={cantidad}
+                    onChange={(value) => setCantidad(value)}
+                    addonBefore="Cant."
+                    style={{ width: "100%" }}
+                    size={isMobile ? "middle" : "large"}
+                  />
+                </Col>
+              </Row>
+              
+              {showProductList && (
+                <Card 
+                  size="small" 
+                  style={{ 
+                    marginTop: 8, 
+                    maxHeight: 200, 
+                    overflow: "auto",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
                   }}
+                  bodyStyle={{ padding: 0 }}
                 >
-                  {item.nombre} ({item.tipoUnidad?.tipo || "Unidad"}) - ${item.precio}
-                </List.Item>
+                  <List
+                    dataSource={productosDisponibles}
+                    renderItem={renderProductItem}
+                    loading={loadingProducts}
+                    locale={{
+                      emptyText: <Empty description="No se encontraron productos" />
+                    }}
+                    size="small"
+                  />
+                </Card>
               )}
-              style={{ maxHeight: 150, overflowY: "auto", marginTop: 8 }}
-              size={isMobile ? "small" : "default"}
-            />
-          </Form.Item>
+            </Form.Item>
+          </div>
 
-          <Form.Item label="Productos Seleccionados">
-            <List
-              bordered
-              dataSource={productosSeleccionados}
-              renderItem={(item, index) => (
-                <List.Item
-                  actions={[
-                    <Button
-                      danger
-                      onClick={() => eliminarProducto(index)}
-                      size={isMobile ? "small" : "middle"}
-                    >
-                      Eliminar
-                    </Button>,
-                  ]}
-                >
-                  {item.nombre} ({item.tipoUnidad || "Unidad"}) x {item.cantidad} = ${item.precio * item.cantidad}
-                </List.Item>
-              )}
-              size={isMobile ? "small" : "default"}
-            />
-            <div style={{ marginTop: 10, fontWeight: "bold" }}>
-              Total: ${total.toFixed(2)}
+          {/* Sección de Carrito de Productos */}
+          <div style={{ background: "#f7f7f7", padding: "12px", borderRadius: "8px" }}>
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "space-between", 
+              alignItems: "center", 
+              marginBottom: 12 
+            }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: isMobile ? 16 : 18,
+                display: "flex",
+                alignItems: "center"
+              }}>
+                <ShoppingCartOutlined style={{ marginRight: 8 }} />
+                Carrito de Productos
+              </h3>
+              <Badge 
+                count={productosSeleccionados.length} 
+                style={{ backgroundColor: productosSeleccionados.length ? "#1890ff" : "#d9d9d9" }}
+              />
             </div>
-          </Form.Item>
+            
+            {productosSeleccionados.length > 0 ? (
+              <>
+                <Card
+                  size="small"
+                  style={{ 
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                    maxHeight: isMobile ? 250 : 300,
+                    overflow: "auto"
+                  }}
+                  bodyStyle={{ padding: 0 }}
+                >
+                  <List
+                    dataSource={productosSeleccionados}
+                    renderItem={renderCartItem}
+                    size="small"
+                  />
+                </Card>
+                
+                <Divider style={{ margin: "12px 0 8px 0" }} />
+                
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "flex-end", 
+                  alignItems: "center",
+                  background: "#e6f7ff", 
+                  padding: "10px", 
+                  borderRadius: "6px"
+                }}>
+                  <div style={{ 
+                    fontSize: 16, 
+                    fontWeight: "bold", 
+                    color: "#1890ff"
+                  }}>
+                    Total: ${total.toLocaleString("es-AR")}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Empty 
+                description="No hay productos en el carrito" 
+                image={Empty.PRESENTED_IMAGE_SIMPLE} 
+              />
+            )}
+          </div>
         </Form>
       </Modal>
+
+      {/* Modal o Drawer para ver detalles (sin cambios) */}
+      {!isMobile ? (
+        <Modal
+          open={detalleModalVisible}
+          onCancel={() => setDetalleModalVisible(false)}
+          footer={null}
+          title={modalTitle}
+          width={600}
+        >
+          {modalContent}
+        </Modal>
+      ) : (
+        <Drawer
+          open={detalleModalVisible}
+          onClose={() => setDetalleModalVisible(false)}
+          title={modalTitle}
+          placement="bottom"
+          height="70%"
+        >
+          {modalContent}
+        </Drawer>
+      )}
     </div>
   );
 };
