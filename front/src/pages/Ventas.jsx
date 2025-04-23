@@ -31,8 +31,12 @@ import {
   MinusOutlined,
   ShopOutlined,
   UserOutlined,
+  PrinterOutlined
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
 
 const { Option } = Select;
 
@@ -51,6 +55,80 @@ const useIsMobile = () => {
   }, []);
 
   return isMobile;
+};
+
+const generarPDF = async (record) => {
+  try {
+    const venta = await api(`api/ventas/${record.id}`);
+    const cliente = await api(`api/clientes/${venta.clienteId}`);
+
+    const detalleHTML = document.createElement("div");
+    detalleHTML.style.padding = "20px";
+    detalleHTML.style.fontSize = "30px";
+    detalleHTML.innerHTML = `
+      <h2>Detalle de Venta</h2>
+      <p><strong>Nro Venta:</strong> ${venta.nroVenta}</p>
+      <p><strong>Cliente:</strong> ${cliente?.nombre} ${cliente?.apellido}</p>
+      <p><strong>Negocio:</strong> ${record.negocioNombre}</p>
+      <p><strong>Total:</strong> $${venta.total.toLocaleString("es-AR")}</p>
+      <p><strong>Fecha:</strong> ${dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}</p>
+      <p><strong>Productos:</strong></p>
+      <ul>
+        ${venta.detalles
+          .map(
+            (d) =>
+              `<li>${d.producto?.nombre || "Producto"} - ${d.cantidad} u. x $${d.precio.toLocaleString(
+                "es-AR"
+              )} = $${(d.precio * d.cantidad).toLocaleString("es-AR")}</li>`
+          )
+          .join("")}
+      </ul>
+    `;
+
+    document.body.appendChild(detalleHTML);
+
+    const canvas = await html2canvas(detalleHTML, {
+      scale: 2, // Mejorar calidad de la imagen
+      width: 800, // Ancho máximo
+      height: 1200, // Alto máximo
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    // Crear el PDF con el tamaño A4
+    const pdf = new jsPDF("p", "pt", "a4");
+
+    // Ajustar imagen al tamaño A4
+    const pdfWidth = 595.28; // Ancho A4 en puntos
+    const pdfHeight = 841.89; // Alto A4 en puntos
+
+    const imgProps = pdf.getImageProperties(imgData);
+    const aspectRatio = imgProps.width / imgProps.height;
+
+    // Escalar la imagen para ajustarse a la página A4
+    let scaledWidth = pdfWidth;
+    let scaledHeight = pdfWidth / aspectRatio;
+
+    // Si la altura escalada excede el tamaño A4, ajustamos la altura
+    if (scaledHeight > pdfHeight) {
+      scaledHeight = pdfHeight;
+      scaledWidth = pdfHeight * aspectRatio;
+    }
+
+    // Calcular la posición para centrar la imagen
+    const marginX = (pdfWidth - scaledWidth) / 2;
+    const marginY = (pdfHeight - scaledHeight) / 2;
+
+    // Agregar la imagen centrada
+    pdf.addImage(imgData, "PNG", marginX, marginY, scaledWidth, scaledHeight);
+
+    // Guardar el PDF
+    pdf.save(`venta-${venta.nroVenta}.pdf`);
+
+    document.body.removeChild(detalleHTML);
+  } catch (error) {
+    message.error("Error al generar el PDF: " + error.message);
+  }
 };
 
 const Ventas = () => {
@@ -470,10 +548,17 @@ const Ventas = () => {
           >
             {!isMobile && "Eliminar"}
           </Button>
+          <Button
+            size={isMobile ? "small" : "middle"}
+            icon={<PrinterOutlined />}
+            onClick={() => generarPDF(record)}
+          >
+            {!isMobile && "Imprimir"}
+          </Button>
         </Space>
       ),
-    },
-  ];
+    }
+  ];    
 
   // Renderizado de cada producto en la lista de búsqueda
   const renderProductItem = (item) => (
