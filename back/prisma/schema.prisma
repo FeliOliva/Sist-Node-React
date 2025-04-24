@@ -21,17 +21,16 @@ model Cheque {
 }
 
 model Negocio {
-  id            Int           @id @default(autoincrement())
-  nombre        String
-  direccion     String?
-  fechaCreacion DateTime      @default(now())
-  estado        Int           @default(1)
-  clienteId     Int?
-  clientes      Cliente?      @relation(fields: [clienteId], references: [id])
-  ventas        Venta[]
-  entregas      Entregas[]
-  cheques       Cheque[]
-  notasCredito  NotaCredito[]
+  id                Int           @id @default(autoincrement())
+  nombre            String
+  direccion         String?
+  fechaCreacion     DateTime      @default(now())
+  estado            Int           @default(1)
+  esCuentaCorriente Boolean       @default(false)
+  ventas            Venta[]
+  entregas          Entregas[]
+  cheques           Cheque[]
+  notasCredito      NotaCredito[]
 }
 
 model Caja {
@@ -61,29 +60,16 @@ model MetodoPago {
   entregas      Entregas[]
 }
 
-model Cliente {
-  id            Int           @id @default(autoincrement())
-  nombre        String
-  apellido      String
-  telefono      String?
-  editable      Int           @default(1)
-  fechaCreacion DateTime      @default(now())
-  estado        Int           @default(1)
-  ventas        Venta[]
-  entregas      Entregas[]
-  notasCredito  NotaCredito[]
-  negocios      Negocio[] // ✅ Ahora el nombre es consistente con la relación
-}
-
 model Usuario {
-  id            Int      @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   usuario       String
   password      String
   rol           Int
-  fechaCreacion DateTime @default(now())
-  estado        Int      @default(1)
+  fechaCreacion DateTime     @default(now())
+  estado        Int          @default(1)
   cajaId        Int?
-  caja          Caja?    @relation(fields: [cajaId], references: [id])
+  caja          Caja?        @relation(fields: [cajaId], references: [id])
+  CierreCaja    CierreCaja[]
 }
 
 model Producto {
@@ -111,17 +97,19 @@ model PrecioLog {
 }
 
 model Venta {
-  id            Int            @id @default(autoincrement())
-  nroVenta      String
-  total         Int
-  fechaCreacion DateTime       @default(now())
-  clienteId     Int?
-  negocioId     Int
-  cajaId        Int?
-  cliente       Cliente?       @relation(fields: [clienteId], references: [id])
-  negocio       Negocio        @relation(fields: [negocioId], references: [id])
-  caja          Caja?          @relation(fields: [cajaId], references: [id])
-  detalles      DetalleVenta[]
+  id             Int            @id @default(autoincrement())
+  nroVenta       String
+  total          Int
+  totalPagado    Int            @default(0)
+  restoPendiente Int            @default(0)
+  estadoPago     Int            @default(1)
+  fechaCreacion  DateTime       @default(now())
+  negocioId      Int
+  cajaId         Int?
+  negocio        Negocio        @relation(fields: [negocioId], references: [id])
+  caja           Caja?          @relation(fields: [cajaId], references: [id])
+  detalles       DetalleVenta[]
+  entregas       Entregas[]     @relation("VentaEntregas")
 }
 
 model DetalleVenta {
@@ -142,14 +130,14 @@ model Entregas {
   nroEntrega    String
   monto         Int
   fechaCreacion DateTime    @default(now())
-  clienteId     Int
   negocioId     Int
   metodoPagoId  Int?
   cajaId        Int?
-  cliente       Cliente     @relation(fields: [clienteId], references: [id])
+  ventaId       Int?
   negocio       Negocio     @relation(fields: [negocioId], references: [id])
   metodoPago    MetodoPago? @relation(fields: [metodoPagoId], references: [id])
   caja          Caja?       @relation(fields: [cajaId], references: [id])
+  venta         Venta?      @relation("VentaEntregas", fields: [ventaId], references: [id])
 }
 
 model NotaCredito {
@@ -157,10 +145,20 @@ model NotaCredito {
   motivo        String
   monto         Int
   fechaCreacion DateTime @default(now())
-  clienteId     Int
   negocioId     Int
   cajaId        Int?
   caja          Caja?    @relation(fields: [cajaId], references: [id])
-  cliente       Cliente  @relation(fields: [clienteId], references: [id])
   negocio       Negocio  @relation(fields: [negocioId], references: [id])
+}
+
+model CierreCaja {
+  id                   Int      @id @default(autoincrement())
+  fecha                DateTime @default(now())
+  usuarioId            Int
+  totalVentas          Int      @default(0)
+  totalPagado          Int      @default(0)
+  totalCuentaCorriente Int      @default(0)
+  totalDiferido        Int      @default(0)
+  ingresoLimpio        Int      @default(0) // ventas - (compras + gastos si querés sumar eso)
+  usuario              Usuario  @relation(fields: [usuarioId], references: [id])
 }

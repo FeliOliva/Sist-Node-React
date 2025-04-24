@@ -8,73 +8,78 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT;
 
-
-
 //ROUTES
-const clientsRoutes = require("./routes/clienteRoutes");
 const negociosRoutes = require("./routes/negocioRoutes");
 const productsRoutes = require("./routes/productsRoutes");
 const ventaRoutes = require("./routes/ventasRoutes");
 const precioLogRoutes = require("./routes/precioLogRoutes");
-const entregaRoutes = require("./routes/entregasRoutes")
+const entregaRoutes = require("./routes/entregasRoutes");
 const notasCreditoRoutes = require("./routes/notasCreditoRoutes");
 const tiposUnidadesRoutes = require("./routes/tiposUnidadesRoutes");
 const chequesRoutes = require("./routes/chequeRoutes");
 const resumenCuentaRoutes = require("./routes/resumenCuenta");
 
-
-app.use(cors({
+app.use(
+  cors({
     origin: "http://localhost:5173",
-    credentials: true
-}));
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "http://localhost:5173");
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    next();
+  res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
 });
-
 
 app.post("/login", async (req, res) => {
-    const { usuario, password } = req.body;
+  const { usuario, password } = req.body;
 
-    if (!usuario || !password) {
-        return res.status(400).json({ error: "Faltan datos en la solicitud" });
+  if (!usuario || !password) {
+    return res.status(400).json({ error: "Faltan datos en la solicitud" });
+  }
+  try {
+    // Buscar el usuario por nombre de usuario
+    const user = await prisma.usuario.findFirst({
+      where: { usuario },
+    });
+    if (!user) {
+      return res.status(401).json({ error: "Usuario no encontrado" });
     }
-    try {
-        // Buscar el usuario por nombre de usuario
-        const user = await prisma.usuario.findFirst({
-            where: { usuario },
-        });
 
-        console.log("Usuario encontrado:", user);
-
-        if (!user) {
-            return res.status(401).json({ error: "Usuario no encontrado" });
-        }
-
-        if (user.password !== password) {
-            return res.status(401).json({ error: "Credenciales incorrectas" });
-        }
-
-        const token = generateToken({ id: user.id, usuario: user.usuario });
-
-        res.json({
-            token,
-            rol: user.rol,
-            cajaId: user.cajaId,
-        });
-    } catch (error) {
-        console.error("Error al autenticar:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
+    if (user.password !== password) {
+      return res.status(401).json({ error: "Credenciales incorrectas" });
     }
+
+    const token = generateToken({ id: user.id, usuario: user.usuario });
+
+    res.json({
+      token,
+      rol: user.rol,
+      cajaId: user.cajaId,
+    });
+  } catch (error) {
+    console.error("Error al autenticar:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
 });
 
-app.use("/api", verifyToken, resumenCuentaRoutes, clientsRoutes, negociosRoutes, productsRoutes, ventaRoutes, precioLogRoutes, entregaRoutes, notasCreditoRoutes, tiposUnidadesRoutes, chequesRoutes);
-
+app.use(
+  "/api",
+  verifyToken,
+  resumenCuentaRoutes,
+  negociosRoutes,
+  productsRoutes,
+  ventaRoutes,
+  precioLogRoutes,
+  entregaRoutes,
+  notasCreditoRoutes,
+  tiposUnidadesRoutes,
+  chequesRoutes
+);
 
 app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
