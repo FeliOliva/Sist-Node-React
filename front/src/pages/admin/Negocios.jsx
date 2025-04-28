@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Input, message, Typography } from "antd";
 import { useParams } from "react-router-dom";
-import { api } from "../services/api";
+import { api } from "../../services/api";
 
 const { Title } = Typography;
 

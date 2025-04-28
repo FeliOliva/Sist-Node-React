@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import "../pages/RepartidorMovil.css";
-import DetalleModal from "../components/DetalleModal";
-import { api } from "../services/api";
+import "./RepartidorMovil.css";
+import DetalleModal from "../../components/DetalleModal";
+import { api } from "../../services/api";
 
 const Repartidor = () => {
   const [resumenData, setResumenData] = useState([]);
@@ -15,10 +15,9 @@ const Repartidor = () => {
   useEffect(() => {
     const fetchResumen = async () => {
       try {
-        // Obtener los datos directamente, sin acceder a .data
         const res = await api("api/resumenDia?cajaId=1");
         console.log("Respuesta de API:", res);
-        
+
         if (!res || !Array.isArray(res)) {
           console.error("La respuesta no es un array:", res);
           setResumenData([]);
@@ -26,30 +25,32 @@ const Repartidor = () => {
           return;
         }
 
-        // Calcular el saldo restante de manera similar a como se hace en Resumenes
         let saldoAcumulado = 0;
         const entregas = [];
-        
+
         const datosConSaldo = res
-          .map(item => ({
+          .map((item) => ({
             ...item,
-            uniqueId: `${item.tipo}-${item.id}`
+            uniqueId: `${item.tipo}-${item.id}`,
           }))
           // Ordenar por fecha si la tienen, si no, usar el orden actual
-          .map(item => {
+          .map((item) => {
             let monto = item.total_con_descuento || item.monto || 0;
             monto = Number(monto);
 
             if (item.tipo === "Venta") {
               saldoAcumulado += monto;
-            } else if (item.tipo === "Entrega" || item.tipo === "Nota de Crédito") {
+            } else if (
+              item.tipo === "Entrega" ||
+              item.tipo === "Nota de Crédito"
+            ) {
               saldoAcumulado -= monto;
               // Guardar las entregas para el historial
               if (item.tipo === "Entrega") {
                 entregas.push({
                   ...item,
                   monto_formateado: formatMoney(monto),
-                  saldo_despues: saldoAcumulado
+                  saldo_despues: saldoAcumulado,
                 });
               }
             }
@@ -57,7 +58,11 @@ const Repartidor = () => {
             return {
               ...item,
               saldo_restante: saldoAcumulado,
-              monto_formateado: (item.total_con_descuento || item.monto || 0).toLocaleString("es-AR")
+              monto_formateado: (
+                item.total_con_descuento ||
+                item.monto ||
+                0
+              ).toLocaleString("es-AR"),
             };
           });
 
@@ -77,10 +82,10 @@ const Repartidor = () => {
 
   // Función para formatear el monto como dinero
   const formatMoney = (amount) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      minimumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -92,7 +97,8 @@ const Repartidor = () => {
     setSelectedItem(null);
   };
 
-  if (loading) return <div className="loading-container">Cargando datos...</div>;
+  if (loading)
+    return <div className="loading-container">Cargando datos...</div>;
   if (error) return <div className="error-container">{error}</div>;
 
   return (
@@ -112,7 +118,7 @@ const Repartidor = () => {
             <h3>Saldo Actual</h3>
             <div className="saldo-monto">{formatMoney(saldoActual)}</div>
           </div>
-          
+
           <div className="entregas-historial">
             <h3>Historial de Entregas</h3>
             {entregasData.length > 0 ? (
@@ -120,12 +126,20 @@ const Repartidor = () => {
                 {entregasData.map((entrega) => (
                   <div key={entrega.uniqueId} className="entrega-item">
                     <div className="entrega-info">
-                      <span className="entrega-numero">Entrega #{entrega.numero || '-'}</span>
-                      <span className="entrega-fecha">{entrega.fecha_hora || '-'}</span>
+                      <span className="entrega-numero">
+                        Entrega #{entrega.numero || "-"}
+                      </span>
+                      <span className="entrega-fecha">
+                        {entrega.fecha_hora || "-"}
+                      </span>
                     </div>
                     <div className="entrega-montos">
-                      <span className="entrega-monto">{entrega.monto_formateado}</span>
-                      <span className="entrega-saldo">Saldo: {formatMoney(entrega.saldo_despues)}</span>
+                      <span className="entrega-monto">
+                        {entrega.monto_formateado}
+                      </span>
+                      <span className="entrega-saldo">
+                        Saldo: {formatMoney(entrega.saldo_despues)}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -137,7 +151,7 @@ const Repartidor = () => {
         </div>
 
         <h2>Resumen del Día</h2>
-        
+
         <div className="resumen-table-container">
           <table className="resumen-table">
             <thead>
@@ -151,20 +165,22 @@ const Repartidor = () => {
             <tbody>
               {resumenData && resumenData.length > 0 ? (
                 resumenData.map((item) => (
-                  <tr 
-                    key={item.uniqueId} 
-                    className={item.tipo?.toLowerCase() || ''}
+                  <tr
+                    key={item.uniqueId}
+                    className={item.tipo?.toLowerCase() || ""}
                     onClick={() => handleItemClick(item)}
                   >
-                    <td>{item.tipo || '-'}</td>
-                    <td>{item.numero || '-'}</td>
-                    <td>{item.negocio?.nombre || '-'}</td>
+                    <td>{item.tipo || "-"}</td>
+                    <td>{item.numero || "-"}</td>
+                    <td>{item.negocio?.nombre || "-"}</td>
                     <td>{formatMoney(item.monto || 0)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="no-data">No hay datos disponibles</td>
+                  <td colSpan="4" className="no-data">
+                    No hay datos disponibles
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -172,7 +188,9 @@ const Repartidor = () => {
         </div>
       </main>
 
-      {selectedItem && <DetalleModal item={selectedItem} onClose={handleCloseModal} />}
+      {selectedItem && (
+        <DetalleModal item={selectedItem} onClose={handleCloseModal} />
+      )}
     </div>
   );
 };

@@ -120,7 +120,7 @@ const getResumenDia = async (cajaId) => {
     0,
     0,
     0
-  ); // 00:00:00
+  );
   const endDate = new Date(
     hoy.getFullYear(),
     hoy.getMonth(),
@@ -128,7 +128,7 @@ const getResumenDia = async (cajaId) => {
     23,
     59,
     59
-  ); // 23:59:59
+  );
 
   const [ventas, entregas, notasCredito] = await Promise.all([
     prisma.venta.findMany({

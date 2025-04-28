@@ -1,8 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { Select, DatePicker, Button, Table, message, Modal, InputNumber, Drawer, Space } from "antd";
+import {
+  Select,
+  DatePicker,
+  Button,
+  Table,
+  message,
+  Modal,
+  InputNumber,
+  Drawer,
+  Space,
+} from "antd";
 import dayjs from "dayjs";
-import { api } from "../services/api";
-import { EyeOutlined, EditOutlined, DeleteOutlined, MoreOutlined, FilterOutlined } from "@ant-design/icons";
+import { api } from "../../services/api";
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  MoreOutlined,
+  FilterOutlined,
+} from "@ant-design/icons";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -98,15 +114,27 @@ const VentasPorNegocio = () => {
     const { tipo, id, negocioId } = record;
     try {
       if (tipo === "Nota de Crédito") {
-        const res = await api(`api/notasCredito/negocio/${negocioId}?page=1&limit=10`);
+        const res = await api(
+          `api/notasCredito/negocio/${negocioId}?page=1&limit=10`
+        );
         const nota = res.notasCredito.find((n) => n.id === id);
         setModalTitle("Detalle de Nota de Crédito");
         setModalContent(
           <div className="text-sm">
-            <p><strong>Cliente:</strong> {nota.cliente?.nombre} {nota.cliente?.apellido}</p>
-            <p><strong>Motivo:</strong> {nota.motivo}</p>
-            <p><strong>Monto:</strong> ${nota.monto.toLocaleString("es-AR")}</p>
-            <p><strong>Fecha:</strong> {dayjs(nota.fechaCreacion).format("DD/MM/YYYY")}</p>
+            <p>
+              <strong>Cliente:</strong> {nota.cliente?.nombre}{" "}
+              {nota.cliente?.apellido}
+            </p>
+            <p>
+              <strong>Motivo:</strong> {nota.motivo}
+            </p>
+            <p>
+              <strong>Monto:</strong> ${nota.monto.toLocaleString("es-AR")}
+            </p>
+            <p>
+              <strong>Fecha:</strong>{" "}
+              {dayjs(nota.fechaCreacion).format("DD/MM/YYYY")}
+            </p>
           </div>
         );
       } else if (tipo === "Venta") {
@@ -117,14 +145,26 @@ const VentasPorNegocio = () => {
         setModalTitle("Detalle de Venta");
         setModalContent(
           <div className="text-sm">
-            <p><strong>Cliente:</strong> {venta.cliente?.nombre} {venta.cliente?.apellido}</p>
-            <p><strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}</p>
-            <p><strong>Fecha:</strong> {dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}</p>
-            <p><strong>Productos:</strong></p>
+            <p>
+              <strong>Cliente:</strong> {venta.cliente?.nombre}{" "}
+              {venta.cliente?.apellido}
+            </p>
+            <p>
+              <strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}
+            </p>
+            <p>
+              <strong>Fecha:</strong>{" "}
+              {dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}
+            </p>
+            <p>
+              <strong>Productos:</strong>
+            </p>
             <ul className="list-disc pl-5">
               {venta.detalles.map((d) => (
                 <li key={d.id} className="mb-1">
-                  {d.producto.nombre} - {d.cantidad} u. x ${d.precio.toLocaleString("es-AR")} = ${d.subTotal.toLocaleString("es-AR")}
+                  {d.producto.nombre} - {d.cantidad} u. x $
+                  {d.precio.toLocaleString("es-AR")} = $
+                  {d.subTotal.toLocaleString("es-AR")}
                 </li>
               ))}
             </ul>
@@ -134,9 +174,15 @@ const VentasPorNegocio = () => {
         setModalTitle("Entrega");
         setModalContent(
           <div className="text-sm">
-            <p><strong>Monto:</strong> ${record.monto.toLocaleString("es-AR")}</p>
-            <p><strong>Fecha:</strong> {dayjs(record.fecha).format("DD/MM/YYYY")}</p>
-            <p><strong>Método de pago:</strong> {record.metodo_pago}</p>
+            <p>
+              <strong>Monto:</strong> ${record.monto.toLocaleString("es-AR")}
+            </p>
+            <p>
+              <strong>Fecha:</strong> {dayjs(record.fecha).format("DD/MM/YYYY")}
+            </p>
+            <p>
+              <strong>Método de pago:</strong> {record.metodo_pago}
+            </p>
           </div>
         );
       }
@@ -179,24 +225,35 @@ const VentasPorNegocio = () => {
           ...item,
           uniqueId: `${item.tipo}-${item.id}`,
         }))
-        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+        .sort(
+          (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+        )
         .map((item) => {
           let monto = item.total_con_descuento || item.monto || 0;
           monto = Number(monto);
 
           if (item.tipo === "Venta") {
             saldoAcumulado += monto;
-          } else if (item.tipo === "Entrega" || item.tipo === "Nota de Crédito") {
+          } else if (
+            item.tipo === "Entrega" ||
+            item.tipo === "Nota de Crédito"
+          ) {
             saldoAcumulado -= monto;
           }
 
           return {
             ...item,
             saldo_restante: saldoAcumulado,
-            monto_formateado: (item.total_con_descuento || item.monto || 0).toLocaleString("es-AR"),
+            monto_formateado: (
+              item.total_con_descuento ||
+              item.monto ||
+              0
+            ).toLocaleString("es-AR"),
           };
         })
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+        .sort(
+          (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+        );
 
       setTransacciones(transaccionesOrdenadas);
       setFilterDrawerVisible(false);
@@ -276,7 +333,8 @@ const VentasPorNegocio = () => {
         {
           title: "Saldo",
           dataIndex: "saldo_restante",
-          render: (saldo) => saldo ? `$${saldo.toLocaleString("es-AR")}` : "-",
+          render: (saldo) =>
+            saldo ? `$${saldo.toLocaleString("es-AR")}` : "-",
         },
         {
           title: "Acciones",
@@ -331,7 +389,8 @@ const VentasPorNegocio = () => {
         {
           title: "Saldo restante",
           dataIndex: "saldo_restante",
-          render: (saldo) => saldo ? `$${saldo.toLocaleString("es-AR")}` : "-",
+          render: (saldo) =>
+            saldo ? `$${saldo.toLocaleString("es-AR")}` : "-",
         },
         {
           title: "Acciones",
@@ -382,10 +441,7 @@ const VentasPorNegocio = () => {
             style={{ width: "100%", maxWidth: 350 }}
           />
 
-          <Button
-            type="primary"
-            onClick={handleBuscarTransacciones}
-          >
+          <Button type="primary" onClick={handleBuscarTransacciones}>
             Buscar Movimientos
           </Button>
         </div>
@@ -456,12 +512,19 @@ const VentasPorNegocio = () => {
           width={isMobile ? "95%" : isTablet ? "80%" : 500}
         >
           <div className="space-y-4">
-            <p><strong>Nro Venta:</strong> {editingRecord?.nroVenta}</p>
-            <p><strong>Fecha:</strong> {dayjs(editingRecord?.fechaCreacion).format("DD/MM/YYYY")}</p>
+            <p>
+              <strong>Nro Venta:</strong> {editingRecord?.nroVenta}
+            </p>
+            <p>
+              <strong>Fecha:</strong>{" "}
+              {dayjs(editingRecord?.fechaCreacion).format("DD/MM/YYYY")}
+            </p>
             <InputNumber
               value={editMonto ?? 0}
               onChange={(value) => setEditMonto(value)}
-              formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+              formatter={(value) =>
+                `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+              }
               parser={(value) => value?.replace(/\$\s?|(\.)/g, "")}
               min={0}
               style={{ width: "100%" }}
@@ -482,12 +545,19 @@ const VentasPorNegocio = () => {
           }
         >
           <div className="space-y-4">
-            <p><strong>Nro Venta:</strong> {editingRecord?.nroVenta}</p>
-            <p><strong>Fecha:</strong> {dayjs(editingRecord?.fechaCreacion).format("DD/MM/YYYY")}</p>
+            <p>
+              <strong>Nro Venta:</strong> {editingRecord?.nroVenta}
+            </p>
+            <p>
+              <strong>Fecha:</strong>{" "}
+              {dayjs(editingRecord?.fechaCreacion).format("DD/MM/YYYY")}
+            </p>
             <InputNumber
               value={editMonto ?? 0}
               onChange={(value) => setEditMonto(value)}
-              formatter={(value) => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+              formatter={(value) =>
+                `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+              }
               parser={(value) => value?.replace(/\$\s?|(\.)/g, "")}
               min={0}
               style={{ width: "100%" }}
@@ -566,12 +636,22 @@ const VentasPorNegocio = () => {
         {selectedRecord && (
           <div className="space-y-4">
             <div className="bg-gray-100 p-3 rounded">
-              <p><strong>Tipo:</strong> {selectedRecord.tipo}</p>
-              <p><strong>Fecha:</strong> {dayjs(selectedRecord.fecha).format("DD/MM/YYYY")}</p>
-              <p><strong>Total:</strong> ${selectedRecord.monto_formateado}</p>
-              <p><strong>Saldo:</strong> ${selectedRecord.saldo_restante?.toLocaleString("es-AR") || "-"}</p>
+              <p>
+                <strong>Tipo:</strong> {selectedRecord.tipo}
+              </p>
+              <p>
+                <strong>Fecha:</strong>{" "}
+                {dayjs(selectedRecord.fecha).format("DD/MM/YYYY")}
+              </p>
+              <p>
+                <strong>Total:</strong> ${selectedRecord.monto_formateado}
+              </p>
+              <p>
+                <strong>Saldo:</strong> $
+                {selectedRecord.saldo_restante?.toLocaleString("es-AR") || "-"}
+              </p>
             </div>
-            
+
             <div className="space-y-2">
               <Button
                 type="primary"
@@ -581,7 +661,7 @@ const VentasPorNegocio = () => {
               >
                 Ver detalle
               </Button>
-              
+
               <Button
                 icon={<EditOutlined />}
                 onClick={() => handleEditarVenta(selectedRecord)}
@@ -589,7 +669,7 @@ const VentasPorNegocio = () => {
               >
                 Editar venta
               </Button>
-              
+
               <Button
                 danger
                 icon={<DeleteOutlined />}

@@ -20,7 +20,7 @@ import {
   Row,
   Col,
 } from "antd";
-import { api } from "../services/api";
+import { api } from "../../services/api";
 import {
   EyeOutlined,
   EditOutlined,
@@ -30,13 +30,12 @@ import {
   PlusOutlined,
   MinusOutlined,
   ShopOutlined,
-  UserOutlined,
-  PrinterOutlined
+  PrinterOutlined,
+  BankOutlined, // Ícono para las cajas
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-
 
 const { Option } = Select;
 
@@ -60,7 +59,6 @@ const useIsMobile = () => {
 const generarPDF = async (record) => {
   try {
     const venta = await api(`api/ventas/${record.id}`);
-    const cliente = await api(`api/clientes/${venta.clienteId}`);
 
     const detalleHTML = document.createElement("div");
     detalleHTML.style.padding = "20px";
@@ -68,18 +66,22 @@ const generarPDF = async (record) => {
     detalleHTML.innerHTML = `
       <h2>Detalle de Venta</h2>
       <p><strong>Nro Venta:</strong> ${venta.nroVenta}</p>
-      <p><strong>Cliente:</strong> ${cliente?.nombre} ${cliente?.apellido}</p>
       <p><strong>Negocio:</strong> ${record.negocioNombre}</p>
+      <p><strong>Caja:</strong> ${record.cajaNombre || "No especificada"}</p>
       <p><strong>Total:</strong> $${venta.total.toLocaleString("es-AR")}</p>
-      <p><strong>Fecha:</strong> ${dayjs(venta.fechaCreacion).format("DD/MM/YYYY")}</p>
+      <p><strong>Fecha:</strong> ${dayjs(venta.fechaCreacion).format(
+        "DD/MM/YYYY"
+      )}</p>
       <p><strong>Productos:</strong></p>
       <ul>
         ${venta.detalles
           .map(
             (d) =>
-              `<li>${d.producto?.nombre || "Producto"} - ${d.cantidad} u. x $${d.precio.toLocaleString(
-                "es-AR"
-              )} = $${(d.precio * d.cantidad).toLocaleString("es-AR")}</li>`
+              `<li>${d.producto?.nombre || "Producto"} - ${
+                d.cantidad
+              } u. x $${d.precio.toLocaleString("es-AR")} = $${(
+                d.precio * d.cantidad
+              ).toLocaleString("es-AR")}</li>`
           )
           .join("")}
       </ul>
@@ -136,11 +138,9 @@ const Ventas = () => {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [clientes, setClientes] = useState([]);
   const [negocios, setNegocios] = useState([]);
   const [productosDisponibles, setProductosDisponibles] = useState([]);
   const [productosSeleccionados, setProductosSeleccionados] = useState([]);
-  const [selectedCliente, setSelectedCliente] = useState(null);
   const [selectedNegocio, setSelectedNegocio] = useState(null);
   const [productoBuscado, setProductoBuscado] = useState("");
   const [cantidad, setCantidad] = useState(1);
@@ -152,6 +152,11 @@ const Ventas = () => {
   const [totalVentas, setTotalVentas] = useState(0);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
+  // Para la caja
+  const [cajas, setCajas] = useState([]);
+  const [selectedCaja, setSelectedCaja] = useState(null);
+  const [loadingCajas, setLoadingCajas] = useState(false);
+
   // Estados para mostrar detalles de venta
   const [detalleModalVisible, setDetalleModalVisible] = useState(false);
   const [detalleVenta, setDetalleVenta] = useState(null);
@@ -161,7 +166,38 @@ const Ventas = () => {
   // Estado para controlar si mostrar la lista de productos
   const [showProductList, setShowProductList] = useState(false);
 
-  // Resto de funciones sin cambios...
+  // Cargar negocios
+  const cargarNegocios = async () => {
+    try {
+      const response = await api("api/getAllNegocios");
+      setNegocios(response.negocios || []);
+    } catch (error) {
+      message.error("Error al cargar negocios: " + error.message);
+    }
+  };
+
+  // Cargar cajas
+  const cargarCajas = async () => {
+    try {
+      setLoadingCajas(true);
+      const response = await api("api/caja");
+      setCajas(response.cajas || []);
+
+      // Si hay una caja guardada en sessionStorage, seleccionarla
+      const cajaGuardada = sessionStorage.getItem("cajaId");
+      if (cajaGuardada) {
+        setSelectedCaja(parseInt(cajaGuardada));
+      } else if (response.cajas && response.cajas.length > 0) {
+        // Si no hay caja guardada pero hay cajas disponibles, seleccionar la primera
+        setSelectedCaja(response.cajas[0]?.id);
+      }
+    } catch (error) {
+      message.error("Error al cargar cajas: " + error.message);
+    } finally {
+      setLoadingCajas(false);
+    }
+  };
+
   const fetchVentas = async (page = 1) => {
     try {
       setLoading(true);
@@ -169,26 +205,36 @@ const Ventas = () => {
         `api/ventas?page=${page}&limit=${pageSize}`
       );
 
-      const clientesPromises = ventas.map((venta) =>
-        api(`api/clientes/${venta.clienteId}`)
+      // Cargar la información de los negocios y cajas para todas las ventas
+      const ventasConInfo = await Promise.all(
+        ventas.map(async (venta) => {
+          try {
+            // Obtener información del negocio para cada venta
+            const negociosData = await api("api/getAllNegocios");
+            const negocio = negociosData.negocios.find(
+              (n) => n.id === venta.negocioId
+            );
+
+            // Obtener información de la caja para cada venta
+            const cajasData = await api("api/caja");
+            const caja = cajasData.cajas.find((c) => c.id === venta.cajaId);
+
+            return {
+              ...venta,
+              negocioNombre: negocio ? negocio.nombre : "Desconocido",
+              cajaNombre: caja ? caja.nombre : "No especificada",
+            };
+          } catch (error) {
+            return {
+              ...venta,
+              negocioNombre: "Desconocido",
+              cajaNombre: "No especificada",
+            };
+          }
+        })
       );
-      const negociosPromises = ventas.map((venta) =>
-        api(`api/negocio/${venta.negocioId}`)
-      );
 
-      const [clientes, negocios] = await Promise.all([
-        Promise.all(clientesPromises),
-        Promise.all(negociosPromises),
-      ]);
-
-      const ventasConNombres = ventas.map((venta, index) => ({
-        ...venta,
-        nombre: clientes[index]?.nombre || "Desconocido",
-        apellido: clientes[index]?.apellido || "Desconocido",
-        negocioNombre: negocios[index]?.nombre || "Desconocido",
-      }));
-
-      setVentas(ventasConNombres);
+      setVentas(ventasConInfo);
       setTotalVentas(total || ventas.length);
       setCurrentPage(page);
     } catch (error) {
@@ -200,18 +246,9 @@ const Ventas = () => {
 
   useEffect(() => {
     fetchVentas(currentPage);
+    cargarNegocios();
+    cargarCajas();
   }, [currentPage]);
-
-  const fetchClientes = async () => {
-    const res = await api("api/clientes");
-    setClientes(res.clients || []);
-  };
-
-  const fetchNegocios = async (clienteId) => {
-    const res = await api(`api/getAllNegociosByCliente/${clienteId}`);
-    const negociosArray = Array.isArray(res.negocios) ? res.negocios : [];
-    setNegocios(negociosArray);
-  };
 
   const buscarProductos = async () => {
     try {
@@ -323,11 +360,13 @@ const Ventas = () => {
 
   const guardarVenta = async () => {
     if (
-      !selectedCliente ||
       !selectedNegocio ||
+      !selectedCaja ||
       productosSeleccionados.length === 0
     ) {
-      message.warning("Debe completar todos los campos");
+      message.warning(
+        "Debe completar todos los campos (negocio, caja y productos)"
+      );
       return;
     }
 
@@ -343,17 +382,20 @@ const Ventas = () => {
         cantidad: producto.cantidad,
         productoId: parseInt(producto.id),
       }));
-      const cajaId = parseInt(sessionStorage.getItem("cajaId"));
-      const rolUsuario = parseInt(sessionStorage.getItem("rol"));
+
+      const rolUsuario = parseInt(sessionStorage.getItem("rol") || "0");
+
       const ventaData = {
         id: ventaEditando?.id,
         nroVenta,
-        clienteId: parseInt(selectedCliente),
         negocioId: parseInt(selectedNegocio),
-        cajaId: cajaId,
+        cajaId: parseInt(selectedCaja),
         rol_usuario: rolUsuario,
         detalles,
       };
+
+      // Guardar la caja seleccionada en sessionStorage
+      sessionStorage.setItem("cajaId", selectedCaja.toString());
 
       await api("api/ventas", "POST", ventaData);
 
@@ -375,15 +417,16 @@ const Ventas = () => {
 
   const editarVenta = async (venta) => {
     try {
-      await fetchClientes();
+      // Cargar negocios y cajas si aún no se han cargado
+      if (negocios.length === 0) {
+        await cargarNegocios();
+      }
+      if (cajas.length === 0) {
+        await cargarCajas();
+      }
 
-      const cliente = await api(`api/clientes/${venta.clienteId}`);
-      const negocios = await api(`api/negocio/${venta.clienteId}`);
-      setSelectedCliente(venta.clienteId);
       setSelectedNegocio(venta.negocioId);
-      setNegocios(
-        Array.isArray(negocios.negocio) ? negocios.negocio : [negocios]
-      );
+      setSelectedCaja(venta.cajaId || null);
 
       // 1. Obtener detalles de productos
       const detalles = venta.detalles || [];
@@ -406,12 +449,6 @@ const Ventas = () => {
       // Guardar la venta que se está editando
       setVentaEditando(venta);
       setModalVisible(true);
-
-      // Agregar cliente a la lista si no está
-      const yaExiste = clientes.some((c) => c.id === cliente.id);
-      if (!yaExiste) {
-        setClientes((prev) => [...prev, cliente]);
-      }
     } catch (error) {
       message.error("Error al cargar los datos de la venta: " + error.message);
     }
@@ -431,7 +468,6 @@ const Ventas = () => {
   const handleVerDetalle = async (record) => {
     try {
       const venta = await api(`api/ventas/${record.id}`);
-      const cliente = await api(`api/clientes/${venta.clienteId}`);
 
       setDetalleVenta(venta);
       setModalTitle("Detalle de Venta");
@@ -441,10 +477,10 @@ const Ventas = () => {
             <strong>Nro Venta:</strong> {venta.nroVenta}
           </p>
           <p>
-            <strong>Cliente:</strong> {cliente?.nombre} {cliente?.apellido}
+            <strong>Negocio:</strong> {record.negocioNombre}
           </p>
           <p>
-            <strong>Negocio:</strong> {record.negocioNombre}
+            <strong>Caja:</strong> {record.cajaNombre || "No especificada"}
           </p>
           <p>
             <strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}
@@ -483,21 +519,16 @@ const Ventas = () => {
       key: "nroVenta",
     },
     {
-      title: "Nombre",
-      dataIndex: "nombre",
-      key: "nombre",
-    },
-    {
-      title: "Apellido",
-      dataIndex: "apellido",
-      key: "apellido",
-      responsive: ["sm"],
-    },
-    {
       title: "Negocio",
       dataIndex: "negocioNombre",
       key: "negocioNombre",
       responsive: ["sm"],
+    },
+    {
+      title: "Caja",
+      dataIndex: "cajaNombre",
+      key: "cajaNombre",
+      responsive: ["md"],
     },
     {
       title: "Total",
@@ -557,8 +588,8 @@ const Ventas = () => {
           </Button>
         </Space>
       ),
-    }
-  ];    
+    },
+  ];
 
   // Renderizado de cada producto en la lista de búsqueda
   const renderProductItem = (item) => (
@@ -662,7 +693,6 @@ const Ventas = () => {
       <Button
         type="primary"
         onClick={() => {
-          fetchClientes();
           setModalVisible(true);
         }}
         icon={<PlusOutlined />}
@@ -690,7 +720,6 @@ const Ventas = () => {
         scroll={{ x: "max-content" }}
       />
 
-      {/* Modal para crear/editar venta con estética mejorada y adaptada para móvil */}
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center" }}>
@@ -705,8 +734,8 @@ const Ventas = () => {
           setModalVisible(false);
           setVentaEditando(null);
           setProductosSeleccionados([]);
-          setSelectedCliente(null);
           setSelectedNegocio(null);
+          // No reiniciar la caja seleccionada para mantener la última selección
         }}
         footer={[
           <Button key="cancelar" onClick={() => setModalVisible(false)}>
@@ -731,7 +760,6 @@ const Ventas = () => {
         }}
       >
         <Form layout="vertical">
-          {/* Sección de Datos del Cliente */}
           <div
             style={{
               background: "#f5f5f5",
@@ -740,58 +768,50 @@ const Ventas = () => {
               marginBottom: "12px",
             }}
           >
-            <h3
-              style={{
-                marginTop: 0,
-                marginBottom: "12px",
-                fontSize: isMobile ? 16 : 18,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <UserOutlined style={{ marginRight: 8 }} />
-              Datos del Cliente
-            </h3>
-
-            <Form.Item label="Cliente" style={{ marginBottom: 12 }}>
-              <Select
-                placeholder="Seleccionar cliente"
-                value={selectedCliente}
-                onChange={(val) => {
-                  setSelectedCliente(val);
-                  setSelectedNegocio(null);
-                  fetchNegocios(val);
-                }}
-                style={{ width: "100%" }}
-                size={isMobile ? "middle" : "large"}
-                showSearch
-                optionFilterProp="children"
-              >
-                {clientes.map((client) => (
-                  <Option key={client.id} value={client.id}>
-                    {client.nombre} {client.apellido}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            <Form.Item label="Negocio" style={{ marginBottom: 0 }}>
-              <Select
-                placeholder="Seleccionar negocio"
-                value={selectedNegocio}
-                onChange={(val) => setSelectedNegocio(val)}
-                disabled={!negocios.length}
-                style={{ width: "100%" }}
-                size={isMobile ? "middle" : "large"}
-                suffixIcon={<ShopOutlined />}
-              >
-                {negocios.map((negocio) => (
-                  <Option key={negocio.id} value={negocio.id}>
-                    {negocio.nombre}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+            <Row gutter={[16, 16]}>
+              <Col span={isMobile ? 24 : 12}>
+                <Form.Item label="Negocio" style={{ marginBottom: 0 }}>
+                  <Select
+                    placeholder="Seleccionar negocio"
+                    value={selectedNegocio}
+                    onChange={(val) => setSelectedNegocio(val)}
+                    disabled={!negocios.length}
+                    style={{ width: "100%" }}
+                    size={isMobile ? "middle" : "large"}
+                    suffixIcon={<ShopOutlined />}
+                  >
+                    {negocios.map((negocio) => (
+                      <Option key={negocio.id} value={negocio.id}>
+                        {negocio.nombre}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={isMobile ? 24 : 12}>
+                <Form.Item label="Caja" style={{ marginBottom: 0 }}>
+                  <Select
+                    placeholder="Seleccionar caja"
+                    value={selectedCaja}
+                    onChange={(val) => {
+                      setSelectedCaja(val);
+                      sessionStorage.setItem("cajaId", val.toString());
+                    }}
+                    disabled={!cajas.length || loadingCajas}
+                    style={{ width: "100%" }}
+                    size={isMobile ? "middle" : "large"}
+                    suffixIcon={<BankOutlined />}
+                    loading={loadingCajas}
+                  >
+                    {cajas.map((caja) => (
+                      <Option key={caja.id} value={caja.id}>
+                        {caja.nombre}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
           </div>
 
           {/* Sección de Agregar Productos */}
@@ -916,7 +936,7 @@ const Ventas = () => {
                     maxHeight: isMobile ? 250 : 300,
                     overflow: "auto",
                   }}
-                  bodyStyle={{ padding: 0 }}
+                  styles={{ body: { padding: 0 } }}
                 >
                   <List
                     dataSource={productosSeleccionados}
@@ -958,7 +978,6 @@ const Ventas = () => {
         </Form>
       </Modal>
 
-      {/* Modal o Drawer para ver detalles (sin cambios) */}
       {!isMobile ? (
         <Modal
           open={detalleModalVisible}

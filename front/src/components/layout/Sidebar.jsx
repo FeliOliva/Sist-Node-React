@@ -7,7 +7,7 @@ import {
   LogoutOutlined,
   CloseOutlined,
   FileTextOutlined,
-  ShoppingOutlined 
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, Button, theme, Drawer } from "antd";
 import { Link, Outlet, useLocation } from "react-router-dom";
@@ -44,8 +44,6 @@ const MainLayout = () => {
 
   const getHeaderTitle = () => {
     switch (location.pathname) {
-      case "/clientes":
-        return "Clientes";
       case "/ventas":
         return "Ventas";
       case "/productos":
@@ -57,43 +55,58 @@ const MainLayout = () => {
     }
   };
 
-  // Componente del menú principal
-  const MainMenuItems = () => (
-    <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]}>
-      <Menu.Item key="/clientes" icon={<UserOutlined />}>
-        <Link
-          to="/clientes"
-          onClick={() => isMobile && setMobileDrawerOpen(false)}
-        >
-          Clientes
-        </Link>
-      </Menu.Item>
-      <Menu.Item key="/ventas" icon={<DollarOutlined />}>
-        <Link
-          to="/ventas"
-          onClick={() => isMobile && setMobileDrawerOpen(false)}
-        >
-          Ventas
-        </Link>
-      </Menu.Item>
-      <Menu.Item key="/productos" icon={<ShoppingOutlined />}>
-        <Link
-          to="/productos"
-          onClick={() => isMobile && setMobileDrawerOpen(false)}
-        >
-          Productos
-        </Link>
-      </Menu.Item>
-      <Menu.Item key="/resumenes" icon={<FileTextOutlined />}>
-        <Link
-          to="/resumenes"
-          onClick={() => isMobile && setMobileDrawerOpen(false)}
-        >
-          Resumenes
-        </Link>
-      </Menu.Item>
-    </Menu>
-  );
+  const MainMenuItems = () => {
+    const userRole = Number(sessionStorage.getItem("rol"));
+    const isAdmin = userRole === 0;
+    const isManager = userRole === 1;
+    const isDelivery = userRole >= 2;
+
+    return (
+      <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]}>
+        {(isAdmin || isManager) && (
+          <>
+            <Menu.Item key="/ventas" icon={<DollarOutlined />}>
+              <Link
+                to="/ventas"
+                onClick={() => isMobile && setMobileDrawerOpen(false)}
+              >
+                Ventas
+              </Link>
+            </Menu.Item>
+            <Menu.Item key="/productos" icon={<ShoppingOutlined />}>
+              <Link
+                to="/productos"
+                onClick={() => isMobile && setMobileDrawerOpen(false)}
+              >
+                Productos
+              </Link>
+            </Menu.Item>
+            <Menu.Item key="/resumenes" icon={<FileTextOutlined />}>
+              <Link
+                to="/resumenes"
+                onClick={() => isMobile && setMobileDrawerOpen(false)}
+              >
+                Resúmenes
+              </Link>
+            </Menu.Item>
+          </>
+        )}
+
+        {isDelivery && (
+          <>
+            <Menu.Item key="/entregas" icon={<ShoppingOutlined />}>
+              <Link
+                to="/entregas"
+                onClick={() => isMobile && setMobileDrawerOpen(false)}
+              >
+                Entregas
+              </Link>
+            </Menu.Item>
+          </>
+        )}
+      </Menu>
+    );
+  };
 
   // Componente para el botón de logout (footer)
   const LogoutButton = () => (
@@ -175,8 +188,10 @@ const MainLayout = () => {
           closable={true}
           onClose={() => setMobileDrawerOpen(false)}
           open={mobileDrawerOpen}
-          bodyStyle={{ padding: 0, backgroundColor: "#001529", height: "100%" }}
-          headerStyle={{ backgroundColor: "#001529", border: "none" }}
+          styles={{
+            body: { padding: 0, backgroundColor: "#001529", height: "100%" },
+            header: { backgroundColor: "#001529", border: "none" },
+          }}
           closeIcon={<CloseOutlined style={{ color: "#fff" }} />}
           width={200}
         >

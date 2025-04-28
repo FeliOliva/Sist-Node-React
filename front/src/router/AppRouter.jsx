@@ -6,20 +6,19 @@ import {
   Navigate,
 } from "react-router-dom";
 import Login from "../pages/Login";
-import Clientes from "../pages/Clientes";
-import Ventas from "../pages/Ventas";
-import Productos from "../pages/Productos";
-import Negocios from "../pages/Negocios";
-import Sidebar from "../components/layout/Sidebar";
-import Resumenes from "../pages/Resumenes";
-import Repartidor from "../pages/Repartidor";
+import Ventas from "../pages/admin/Ventas";
+import Productos from "../pages/admin/Productos";
+import Negocios from "../pages/admin/Negocios";
+import Resumenes from "../pages/admin/Resumenes";
+import Repartidor from "../pages/repartidor/Repartidor";
 import Unauthorized from "../pages/Unauthorized";
-
+import Entregas from "../pages/repartidor/Entregas";
+import MainLayout from "../components/layout/Sidebar"; // Ajusta el path si es necesario
 
 const AppRouter = () => {
   const token = sessionStorage.getItem("token");
   const expiry = sessionStorage.getItem("tokenExpiry");
-  const userRole = Number(sessionStorage.getItem("rol")) 
+  const userRole = Number(sessionStorage.getItem("rol"));
   const now = Date.now();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -30,69 +29,64 @@ const AppRouter = () => {
   const isManager = userRole === 1;
   const isDelivery = userRole >= 2;
 
-  // Detectar si el dispositivo es móvil
+  console.log("User Role:", userRole);
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
 
     checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
+    window.addEventListener("resize", checkIsMobile);
 
-    return () => window.removeEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
-
-  // Renderizar la interfaz móvil para roles 2 o mayores en dispositivos móviles
-  if (isAuthenticated && isDelivery && isMobile) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/repartidor" element={<Repartidor />} />
-          <Route path="*" element={<Navigate to="/repartidor" />} />
-        </Routes>
-      </Router>
-    );
-  }
-
-  // Determinar la página de inicio según el rol
-  const getHomePage = () => {
-    if (isAdmin || isManager) return "/clientes";
-    return "/ventas";
-  };
 
   return (
     <Router>
       <Routes>
         {isAuthenticated ? (
-          <Route path="/" element={<Sidebar />}>
-            <Route path="ventas" element={<Unauthorized />} />
-
-            {isAdmin || isManager ? (
+          <>
+            {isDelivery && isMobile ? (
+              // Mobile view para repartidor
               <>
-                <Route path="clientes" element={<Clientes />} />
-                <Route path="productos" element={<Productos />} />
-                <Route path="negocios/:id" element={<Negocios />} />
-                <Route path="resumenes" element={<Resumenes />} />
+                <Route path="/repartidor" element={<Repartidor />} />
+                <Route path="/entregas" element={<Entregas />} />
+                <Route path="*" element={<Navigate to="/repartidor" />} />
               </>
             ) : (
-              <>
-                <Route path="clientes" element={<Unauthorized />} />
-                <Route path="productos" element={<Unauthorized />} />
-                <Route path="negocios/:id" element={<Unauthorized />} />
-                <Route path="resumenes" element={<Unauthorized />} />
-              </>
+              // Vista escritorio (admin o manager)
+              <Route path="/" element={<MainLayout />}>
+                <Route
+                  index
+                  element={
+                    <Navigate
+                      to={isAdmin || isManager ? "/clientes" : "/ventas"}
+                    />
+                  }
+                />
+
+                {isAdmin || isManager ? (
+                  <>
+                    <Route path="productos" element={<Productos />} />
+                    <Route path="negocios/:id" element={<Negocios />} />
+                    <Route path="resumenes" element={<Resumenes />} />
+                    <Route path="ventas" element={<Ventas />} />
+                  </>
+                ) : (
+                  // Si no tiene permisos de admin ni manager
+                  <>
+                    <Route path="productos" element={<Unauthorized />} />
+                    <Route path="negocios/:id" element={<Unauthorized />} />
+                    <Route path="resumenes" element={<Unauthorized />} />
+                    <Route path="ventas" element={<Unauthorized />} />
+                  </>
+                )}
+                <Route path="*" element={<h1>404 - Página no encontrada</h1>} />
+              </Route>
             )}
-
-            {/* Si no coincide con ninguna ruta válida */}
-            <Route path="*" element={<h1>404 - Página no encontrada</h1>} />
-          </Route>
-        ) : isDelivery ? (
-          <>
-            <Route path="/repartidor" element={<Repartidor />} />
-            <Route path="*" element={<Navigate to="/repartidor" />} />
           </>
-
         ) : (
+          // No autenticado
           <>
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<Navigate to="/login" />} />
