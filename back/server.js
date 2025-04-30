@@ -60,6 +60,7 @@ app.post("/login", async (req, res) => {
       token,
       rol: user.rol,
       cajaId: user.cajaId,
+      userName: user.usuario,
     });
   } catch (error) {
     console.error("Error al autenticar:", error);

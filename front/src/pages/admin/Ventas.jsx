@@ -171,6 +171,7 @@ const Ventas = () => {
     try {
       const response = await api("api/getAllNegocios");
       setNegocios(response.negocios || []);
+      console.log("negocios", response.negocios);
     } catch (error) {
       message.error("Error al cargar negocios: " + error.message);
     }
@@ -181,7 +182,8 @@ const Ventas = () => {
     try {
       setLoadingCajas(true);
       const response = await api("api/caja");
-      setCajas(response.cajas || []);
+      setCajas(response);
+      console.log("cajas", response);
 
       // Si hay una caja guardada en sessionStorage, seleccionarla
       const cajaGuardada = sessionStorage.getItem("cajaId");
@@ -204,6 +206,7 @@ const Ventas = () => {
       const { ventas, total } = await api(
         `api/ventas?page=${page}&limit=${pageSize}`
       );
+      console.log("ventas ", ventas);
 
       // Cargar la información de los negocios y cajas para todas las ventas
       const ventasConInfo = await Promise.all(
@@ -218,7 +221,6 @@ const Ventas = () => {
             // Obtener información de la caja para cada venta
             const cajasData = await api("api/caja");
             const caja = cajasData.cajas.find((c) => c.id === venta.cajaId);
-
             return {
               ...venta,
               negocioNombre: negocio ? negocio.nombre : "Desconocido",

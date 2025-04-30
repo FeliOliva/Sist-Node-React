@@ -56,14 +56,7 @@ const AppRouter = () => {
             ) : (
               // Vista escritorio (admin o manager)
               <Route path="/" element={<MainLayout />}>
-                <Route
-                  index
-                  element={
-                    <Navigate
-                      to={isAdmin || isManager ? "/clientes" : "/ventas"}
-                    />
-                  }
-                />
+                <Route index element={<Navigate to={"/ventas"} />} />
 
                 {isAdmin || isManager ? (
                   <>

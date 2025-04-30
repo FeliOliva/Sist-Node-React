@@ -111,7 +111,7 @@ const getResumenCuentaByNegocio = async (
   return result;
 };
 
-const getResumenDia = async (cajaId) => {
+const getResumenDia = async () => {
   const hoy = new Date();
   const startDate = new Date(
     hoy.getFullYear(),
@@ -133,7 +133,6 @@ const getResumenDia = async (cajaId) => {
   const [ventas, entregas, notasCredito] = await Promise.all([
     prisma.venta.findMany({
       where: {
-        cajaId,
         fechaCreacion: {
           gte: startDate,
           lte: endDate,
@@ -143,6 +142,7 @@ const getResumenDia = async (cajaId) => {
         id: true,
         nroVenta: true,
         total: true,
+        cajaId: true,
         negocio: {
           select: {
             id: true,
@@ -167,7 +167,6 @@ const getResumenDia = async (cajaId) => {
 
     prisma.entregas.findMany({
       where: {
-        cajaId,
         fechaCreacion: {
           gte: startDate,
           lte: endDate,
@@ -177,6 +176,7 @@ const getResumenDia = async (cajaId) => {
         id: true,
         monto: true,
         nroEntrega: true,
+        cajaId: true,
         metodoPago: {
           select: { nombre: true },
         },
@@ -191,7 +191,6 @@ const getResumenDia = async (cajaId) => {
 
     prisma.notaCredito.findMany({
       where: {
-        cajaId,
         fechaCreacion: {
           gte: startDate,
           lte: endDate,
@@ -201,6 +200,7 @@ const getResumenDia = async (cajaId) => {
         id: true,
         monto: true,
         motivo: true,
+        cajaId: true,
         negocio: {
           select: {
             id: true,
