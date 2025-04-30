@@ -45,10 +45,11 @@ const Entregas = () => {
     try {
       setLoading(true);
       const cajaId = sessionStorage.getItem("cajaId");
+      console.log("cajaId", cajaId); // Agrega esta línea para mostrar el valor de cajaId in
       if (!cajaId) throw new Error("No hay cajaId en sessionStorage");
 
       const data = await api(`api/resumenDia?cajaId=${cajaId}`, "GET");
-      console.log("Entregas:", data);
+      console.log("Resumen del día:", data);
       setEntregas(data);
     } catch (error) {
       console.error("Error cargando entregas:", error.message);

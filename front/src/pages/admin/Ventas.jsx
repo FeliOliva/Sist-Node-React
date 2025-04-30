@@ -220,7 +220,7 @@ const Ventas = () => {
 
             // Obtener información de la caja para cada venta
             const cajasData = await api("api/caja");
-            const caja = cajasData.cajas.find((c) => c.id === venta.cajaId);
+            const caja = (cajasData.cajas || cajasData)?.find((c) => c.id === venta.cajaId);
             return {
               ...venta,
               negocioNombre: negocio ? negocio.nombre : "Desconocido",
