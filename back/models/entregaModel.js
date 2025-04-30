@@ -169,6 +169,33 @@ const dropEntrega = async (id) => {
     throw new Error("Error al eliminar la entrega");
   }
 };
+
+
+const getUltimaEntregaDelDia = async () => {
+  try {
+    const hoy = new Date();
+    const inicioDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const finDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
+    
+    const ultimaEntrega = await prisma.entregas.findFirst({
+      where: {
+        fechaCreacion: {
+          gte: inicioDelDia,
+          lte: finDelDia
+        }
+      },
+      orderBy: {
+        id: 'desc'
+      }
+    });
+    
+    return ultimaEntrega;
+  } catch (error) {
+    console.error("Error al obtener la última entrega del día:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllEntregas,
   getEntregaById,
@@ -178,4 +205,5 @@ module.exports = {
   dropEntrega,
   getVentaById,
   updateVenta,
+  getUltimaEntregaDelDia,
 };

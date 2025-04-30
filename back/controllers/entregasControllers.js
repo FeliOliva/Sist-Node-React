@@ -1,6 +1,47 @@
 const entregaModel = require("../models/entregaModel");
 const { redisClient } = require("../db");
 
+
+
+const generarNroEntrega = async () => {
+  try {
+    // Obtener la fecha actual en formato AAAAMMDD
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    const fechaStr = `${anio}${mes}${dia}`;
+    
+    // Buscar la última entrega del día para determinar el siguiente número secuencial
+    const ultimaEntrega = await entregaModel.getUltimaEntregaDelDia();
+    
+    let numeroSecuencial = 1; // Valor por defecto si no hay entregas previas
+    
+    if (ultimaEntrega && ultimaEntrega.nroEntrega) {
+      // Verificar si la última entrega es del mismo día
+      const partes = ultimaEntrega.nroEntrega.split('-');
+      if (partes.length === 2 && partes[0] === fechaStr) {
+        // Si es del mismo día, incrementar el contador
+        numeroSecuencial = parseInt(partes[1]) + 1;
+      }
+    }
+    
+    // Formatear el número secuencial con ceros a la izquierda
+    const secuencialStr = String(numeroSecuencial).padStart(4, '0');
+    
+    // Combinar para formar el número de entrega completo
+    const nroEntrega = `${fechaStr}-${secuencialStr}`;
+    
+    return nroEntrega;
+  } catch (error) {
+    console.error("Error al generar número de entrega:", error);
+    // En caso de error, generar un número basado en timestamp para evitar fallas
+    const timestamp = new Date().getTime();
+    return `E${timestamp}`;
+  }
+};
+
+
 const clearEntregaCache = async () => {
   try {
     const keys = await redisClient.keys("Entregas:*");
@@ -143,42 +184,87 @@ const getEntregasByNegocio = async (req, res) => {
 
 const addEntrega = async (req, res) => {
   try {
-    const { nroEntrega, monto, negocioId, metodoPagoId, ventaId, cajaId } =
-      req.body;
-    if (
-      !nroEntrega ||
-      !monto ||
-      !negocioId ||
-      !metodoPagoId ||
-      !ventaId ||
-      !cajaId
-    ) {
-      return res.status(400).json({ error: "Faltan campos obligatorios" });
+    const { ventaId, monto, medioPago, estadoPago, cajaId } = req.body;
+    
+    // Validar campos obligatorios
+    if (!ventaId || (estadoPago !== 1 && !monto) || !medioPago) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Faltan campos obligatorios" 
+      });
     }
 
+    // Obtener la venta
     const venta = await entregaModel.getVentaById(ventaId);
     if (!venta) {
-      return res.status(404).json({ error: "Venta no encontrada" });
-    }
-    let estado;
-    let nuevoTotalPagado = venta.totalPagado + monto;
-    let nuevoSaldoRestante = venta.total - nuevoTotalPagado;
-
-    if (nuevoTotalPagado > venta.total) {
-      return res
-        .status(400)
-        .json({ error: "El monto excede el total de la venta" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Venta no encontrada" 
+      });
     }
 
-    if (nuevoTotalPagado === venta.total) {
-      estado = 2; // totalPagado
+    // Mapear medioPago a metodoPagoId
+    let metodoPagoId;
+    
+    // Primera opción: verificar si medioPago es un número válido
+    if (!isNaN(medioPago) && parseInt(medioPago) > 0) {
+      metodoPagoId = parseInt(medioPago);
     } else {
-      estado = 3; // parcialPagado
+      // Segunda opción: mapear desde string a ID
+      const medioPagoMap = {
+        'efectivo': 1,
+        'debito': 2,
+        'credito': 3,
+        'transferencia': 4,
+        'qr': 5,
+        'pendiente_caja': 6
+      };
+      
+      metodoPagoId = medioPagoMap[medioPago.toLowerCase()];
+    }
+  
+
+    // Obtener el negocioId de la venta o desde el request si está disponible
+    const negocioId = venta.negocioId || req.body.negocioId;
+    
+    if (!negocioId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "ID de negocio no encontrado" 
+      });
     }
 
-    // Actualizar la venta
+    // Generar número de entrega
+    const nroEntrega = await generarNroEntrega();
+    
+    let montoFinal = parseFloat(monto);
+    let nuevoTotalPagado, nuevoSaldoRestante;
+    
+    // Procesar según estadoPago
+    if (estadoPago === 1) { // Pendiente en caja
+      // No modificar totalPagado porque queda pendiente
+      nuevoTotalPagado = venta.totalPagado || 0;
+      montoFinal = parseFloat(venta.total_con_descuento || venta.total || 0);
+      nuevoSaldoRestante = venta.total - nuevoTotalPagado;
+    } else {
+      nuevoTotalPagado = (venta.totalPagado || 0) + montoFinal;
+      nuevoSaldoRestante = parseFloat(venta.total_con_descuento || venta.total || 0) - nuevoTotalPagado;
+      
+      // Validar que el monto no exceda el total
+      if (nuevoTotalPagado > parseFloat(venta.total_con_descuento || venta.total || 0)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "El monto excede el total de la venta" 
+        });
+      }
+    }
+
+    // Asegurar que montoFinal sea un entero si la BD espera Int
+    montoFinal = Math.round(montoFinal);
+
+    // Actualizar la venta con el nuevo estado de pago
     await entregaModel.updateVenta(ventaId, {
-      estadoPago: estado,
+      estadoPago,
       totalPagado: nuevoTotalPagado,
       restoPendiente: nuevoSaldoRestante,
     });
@@ -190,18 +276,27 @@ const addEntrega = async (req, res) => {
     }
     await clearEntregaCache();
 
+    // Registrar la entrega/pago
     const newEntrega = await entregaModel.addEntrega({
       nroEntrega,
-      monto,
+      monto: montoFinal,
       negocioId,
       metodoPagoId,
       ventaId,
-      cajaId,
+      cajaId: cajaId || 1,
     });
-    res.json(newEntrega);
+
+    res.json({
+      success: true,
+      message: "Pago registrado correctamente",
+      data: newEntrega
+    });
   } catch (error) {
-    console.error("Error al agregar la entrega:", error);
-    res.status(500).json({ error: "Error al agregar la entrega" });
+    console.error("Error al registrar el pago:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error al registrar el pago" 
+    });
   }
 };
 
@@ -239,6 +334,8 @@ const dropEntrega = async (req, res) => {
     res.status(500).json({ error: "Error al eliminar la entrega" });
   }
 };
+
+
 
 module.exports = {
   getEntregas,
