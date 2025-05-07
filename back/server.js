@@ -4,9 +4,16 @@ const { generateToken, verifyToken } = require("./auth");
 const { prisma } = require("./db");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
+const { setupWebSocket } = require("./websocket"); // nuevo
+const http = require("http");
 
 const app = express();
 const PORT = process.env.PORT;
+
+const server = http.createServer(app);
+
+// WebSocket con prisma y el server HTTP
+setupWebSocket(server, prisma);
 
 //ROUTES
 const negociosRoutes = require("./routes/negocioRoutes");
@@ -83,6 +90,6 @@ app.use(
   cajaRoutes
 );
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

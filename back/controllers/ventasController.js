@@ -1,5 +1,6 @@
 const ventaModel = require("../models/ventaModel");
 const { redisClient } = require("../db");
+const { broadcastNuevaVenta } = require("../websocket");
 
 const getVentas = async (req, res) => {
   try {
@@ -185,6 +186,8 @@ const addVenta = async (req, res) => {
       estadoPago,
       detalles: detallesProcesados,
     });
+
+    broadcastNuevaVenta(venta);
 
     res.status(200).json(venta);
   } catch (error) {

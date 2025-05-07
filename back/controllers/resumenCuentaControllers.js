@@ -42,7 +42,9 @@ const resumenDia = async (req, res) => {
       return res.status(400).json({ error: "El ID de la caja es obligatorio" });
     }
 
-    const resumenData = await resumenCuentaModel.getResumenDia(parseInt(cajaId));
+    const resumenData = await resumenCuentaModel.getResumenDia(
+      parseInt(cajaId)
+    );
     res.json(resumenData);
   } catch (error) {
     console.error("Error al obtener el resumen del día:", error);
