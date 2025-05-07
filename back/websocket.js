@@ -1,55 +1,145 @@
 // websocket.js
 const { WebSocketServer } = require("ws");
-let wsClients = new Set();
-let ventasDelDia = [];
+const url = require('url');
+
+// Almacenar conexiones activas por cajaId
+const connections = {};
+// Mantener un registro de ventas por cajaId
+const ventasPorCaja = {};
 
 function setupWebSocket(server, prisma) {
   const wss = new WebSocketServer({ server });
 
-  const cargarVentasDelDia = async () => {
+  const cargarVentasDelDia = async (cajaId) => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
     const mañana = new Date(hoy);
     mañana.setDate(hoy.getDate() + 1);
 
-    ventasDelDia = await prisma.venta.findMany({
+    // Filtrar ventas por cajaId específico usando fechaCreacion en lugar de fecha
+    const ventas = await prisma.venta.findMany({
       where: {
-        fecha: {
+        fechaCreacion: {
           gte: hoy,
           lt: mañana,
         },
+        cajaId: parseInt(cajaId), // Asegurarse de que cajaId sea un número
       },
       include: {
         detalles: true,
       },
     });
+
+    // Almacenar las ventas para esta caja
+    ventasPorCaja[cajaId] = ventas;
+    return ventas;
   };
 
-  wss.on("connection", async (ws) => {
-    console.log("Cliente conectado por WS");
-    wsClients.add(ws);
+  wss.on("connection", async (ws, req) => {
+    // Obtener el cajaId de la URL de la conexión
+    const parameters = url.parse(req.url, true);
+    const cajaId = parameters.query.cajaId;
+    
+    if (!cajaId) {
+      console.log('Conexión rechazada: No se proporcionó cajaId');
+      ws.close();
+      return;
+    }
+    
+    console.log(`Nueva conexión establecida para caja ID: ${cajaId}`);
+    
+    // Almacenar la conexión asociada al cajaId
+    if (!connections[cajaId]) {
+      connections[cajaId] = [];
+    }
+    connections[cajaId].push(ws);
+    
+    // Cargar ventas del día para esta caja específica
+    let ventasCaja;
+    try {
+      if (!ventasPorCaja[cajaId]) {
+        ventasCaja = await cargarVentasDelDia(cajaId);
+      } else {
+        ventasCaja = ventasPorCaja[cajaId];
+      }
+      
+      // Enviar datos iniciales
+      ws.send(JSON.stringify({ 
+        tipo: "ventas-iniciales", 
+        data: ventasCaja 
+      }));
+    } catch (error) {
+      console.error("Error al cargar ventas:", error);
+      // Enviar array vacío en caso de error
+      ws.send(JSON.stringify({ 
+        tipo: "ventas-iniciales", 
+        data: [] 
+      }));
+    }
 
-    if (ventasDelDia.length === 0) await cargarVentasDelDia();
-
-    ws.send(JSON.stringify({ tipo: "ventas-iniciales", data: ventasDelDia }));
-
+    // Manejar cierre de conexión
     ws.on("close", () => {
-      console.log("Cliente desconectado");
-      wsClients.delete(ws);
+      console.log(`Conexión cerrada para caja ID: ${cajaId}`);
+      connections[cajaId] = connections[cajaId].filter(conn => conn !== ws);
+      if (connections[cajaId].length === 0) {
+        delete connections[cajaId];
+      }
     });
   });
 }
 
-function broadcastNuevaVenta(venta) {
-  ventasDelDia.push(venta);
-  wsClients.forEach((client) => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify({ tipo: "nueva-venta", data: venta }));
+// Nueva función para enviar venta solo a los clientes de una caja específica
+function enviarNuevaVenta(cajaId, venta) {
+  if (!connections[cajaId]) {
+    console.log(`No hay conexiones activas para la caja ID: ${cajaId}`);
+    return;
+  }
+  
+  // Añadir la venta al historial de esa caja
+  if (!ventasPorCaja[cajaId]) {
+    ventasPorCaja[cajaId] = [];
+  }
+  ventasPorCaja[cajaId].push(venta);
+  
+  const mensaje = {
+    tipo: "nueva-venta",
+    data: venta
+  };
+  
+  connections[cajaId].forEach(ws => {
+    if (ws.readyState === 1) { // 1 = WebSocket.OPEN
+      try {
+        ws.send(JSON.stringify(mensaje));
+      } catch (error) {
+        console.error(`Error al enviar mensaje a cliente de caja ${cajaId}:`, error);
+      }
     }
   });
+}
+
+// Mantener broadcastNuevaVenta para compatibilidad con código existente
+function broadcastNuevaVenta(venta) {
+  // Si la venta tiene cajaId, usar enviarNuevaVenta
+  if (venta && venta.cajaId) {
+    enviarNuevaVenta(venta.cajaId, venta);
+  } else {
+    // Comportamiento fallback: enviar a todos (como estaba antes)
+    Object.keys(connections).forEach(cajaId => {
+      connections[cajaId].forEach(client => {
+        if (client.readyState === 1) {
+          try {
+            client.send(JSON.stringify({ tipo: "nueva-venta", data: venta }));
+          } catch (error) {
+            console.error(`Error al enviar mensaje a cliente:`, error);
+          }
+        }
+      });
+    });
+  }
 }
 
 module.exports = {
   setupWebSocket,
   broadcastNuevaVenta,
+  enviarNuevaVenta
 };
