@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Card,
   Button,
@@ -12,6 +12,8 @@ import {
   Checkbox,
   Form,
   Alert,
+  notification,
+  Badge,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -22,6 +24,8 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
   CalendarOutlined,
+  BellOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { api } from "../../services/api";
 
@@ -35,8 +39,126 @@ const Entregas = () => {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [payLater, setPayLater] = useState(false);
+  const [hasNewVentas, setHasNewVentas] = useState(false);
   const [form] = Form.useForm();
+  const [wsConnected, setWsConnected] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const  initialized = useRef(false); // Variable para controlar la inicialización del WebSocket
 
+  // Configurar WebSocket
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    const cajaId = sessionStorage.getItem("cajaId");
+    if (!cajaId) {
+      console.error("No hay cajaId en sessionStorage");
+      return;
+    }
+
+    // Crear conexión WebSocket
+    const ws = new WebSocket(`ws://localhost:3001?cajaId=${cajaId}`);
+    setSocket(ws);
+
+    // Evento de conexión establecida
+    ws.onopen = () => {
+      console.log("Conexión WebSocket establecida");
+      setWsConnected(true);
+    };
+
+    // Evento de error de conexión
+    ws.onerror = (error) => {
+      console.error("Error en la conexión WebSocket:", error);
+      setWsConnected(false);
+    };
+
+    // Evento de cierre de conexión
+    ws.onclose = () => {
+      console.log("Conexión WebSocket cerrada");
+      setWsConnected(false);
+    };
+
+    // Evento de recepción de mensaje
+    ws.onmessage = (event) => {
+      try {
+        const mensaje = JSON.parse(event.data);
+        console.log("Mensaje WebSocket recibido:", mensaje);
+
+        // Procesamos el mensaje según su tipo
+        if (mensaje.tipo === "ventas-iniciales") {
+          // Si es la carga inicial de ventas, actualizamos el estado
+          if (mensaje.data && mensaje.data.length > 0) {
+            // Transformar los datos si es necesario para que coincidan con el formato esperado
+            const nuevasVentas = mensaje.data.map(venta => ({
+              id: venta.id,
+              tipo: "Venta",
+              numero: venta.nroVenta,
+              monto: venta.total,
+              monto_pagado: venta.totalPagado,
+              resto_pendiente: venta.restoPendiente,
+              metodo_pago: venta.estadoPago === 1 ? null : "EFECTIVO", // Asumimos que 1 = pendiente
+              negocio: { nombre: `Negocio #${venta.negocio?.nombre}` }, // Ajusta esto según tus datos
+              detalles: venta.detalles.map(detalle => ({
+                cantidad: detalle.cantidad,
+                precio: detalle.precio,
+                subTotal: detalle.subTotal,
+                producto: {
+                  nombre: `Producto #${detalle.productoId}` // Ajusta esto según tus datos
+                }
+              }))
+            }));
+
+            // Si estamos en la carga inicial, reemplazamos todo
+            setEntregas(prevEntregas => [...prevEntregas, ...nuevasVentas]);
+          }
+        } else if (mensaje.tipo === "nueva-venta") {
+          // Si es una nueva venta, la agregamos a la lista y mostramos notificación
+          if (mensaje.data) {
+            const nuevaVenta = {
+              id: mensaje.data.id,
+              tipo: "Venta",
+              numero: mensaje.data.nroVenta,
+              monto: mensaje.data.total,
+              monto_pagado: mensaje.data.totalPagado,
+              resto_pendiente: mensaje.data.restoPendiente,
+              metodo_pago: mensaje.data.estadoPago === 1 ? null : "EFECTIVO",
+              negocio: { nombre: `Negocio #${mensaje.data.negocio?.nombre}` },
+              detalles: mensaje.data.detalles.map(detalle => ({
+                cantidad: detalle.cantidad,
+                precio: detalle.precio,
+                subTotal: detalle.subTotal,
+                producto: {
+                  nombre: `Producto #${detalle.productoId}`
+                }
+              }))
+            };
+
+            setEntregas(prevEntregas => [nuevaVenta, ...prevEntregas]);
+            setHasNewVentas(true);
+
+            // Mostrar notificación
+            notification.open({
+              message: "Nueva venta registrada",
+              description: `Se ha registrado una nueva venta #${nuevaVenta.numero} por ${formatMoney(nuevaVenta.monto)}`,
+              icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
+              placement: "topRight",
+              duration: 5,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error al procesar mensaje WebSocket:", error);
+      }
+    };
+
+    // Limpiar conexión al desmontar
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, []); // Este efecto solo se ejecuta una vez al montar el componente
+
+  // Cargar entregas iniciales
   useEffect(() => {
     fetchEntregas();
   }, []);
@@ -45,12 +167,13 @@ const Entregas = () => {
     try {
       setLoading(true);
       const cajaId = sessionStorage.getItem("cajaId");
-      console.log("cajaId", cajaId); // Agrega esta línea para mostrar el valor de cajaId in
+      console.log("cajaId", cajaId);
       if (!cajaId) throw new Error("No hay cajaId en sessionStorage");
 
       const data = await api(`api/resumenDia?cajaId=${cajaId}`, "GET");
       console.log("Resumen del día:", data);
       setEntregas(data);
+      setHasNewVentas(false); // Resetear el indicador de nuevas ventas
     } catch (error) {
       console.error("Error cargando entregas:", error.message);
     } finally {
@@ -165,14 +288,37 @@ const Entregas = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-lg mx-auto py-6 px-4">
-        <h1 className="text-2xl font-bold text-center mb-6 text-blue-700">
-          Entregas Pendientes
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-blue-700">
+            Entregas Pendientes
+          </h1>
+          <div className="flex items-center gap-3">
+            {wsConnected ? (
+              <Tag color="success" icon={<CheckCircleOutlined />}>
+                Conectado
+              </Tag>
+            ) : (
+              <Tag color="error" icon={<ClockCircleOutlined />}>
+                Desconectado
+              </Tag>
+            )}
+
+            <Badge dot={hasNewVentas} offset={[-5, 0]}>
+              <Button
+                type="primary"
+                icon={<ReloadOutlined />}
+                onClick={fetchEntregas}
+                title="Actualizar entregas"
+              >
+                Actualizar
+              </Button>
+            </Badge>
+          </div>
+        </div>
 
         <div className="space-y-4">
-          {entregas.map((entrega) => (
+          {entregas.map((entrega, index) => (
             <Card
-              key={entrega.id}
               className="shadow-md rounded-lg border-l-4 hover:shadow-lg transition-shadow"
               style={{
                 borderLeftColor: entrega.metodo_pago ? "#10b981" : "#f59e0b",
@@ -292,8 +438,8 @@ const Entregas = () => {
                   {selectedEntrega.metodo_pago === "PENDIENTE_OTRO_DIA"
                     ? "PAGO OTRO DÍA"
                     : selectedEntrega.metodo_pago
-                    ? "COBRADA"
-                    : "PENDIENTE"}
+                      ? "COBRADA"
+                      : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.metodo_pago !== "PENDIENTE_OTRO_DIA" && (
