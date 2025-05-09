@@ -184,118 +184,58 @@ const getEntregasByNegocio = async (req, res) => {
 
 const addEntrega = async (req, res) => {
   try {
-    const { ventaId, monto, medioPago, estadoPago, cajaId } = req.body;
+    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } = req.body;
     
-    // Validar campos obligatorios
-    if (!ventaId || (estadoPago !== 1 && !monto) || !medioPago) {
+    // Validar los datos recibidos
+    if ((!monto && !pagoOtroDia) || !cajaId || !negocioId) {
       return res.status(400).json({ 
         success: false, 
-        message: "Faltan campos obligatorios" 
+        message: 'Faltan datos requeridos para crear la entrega' 
       });
     }
 
-    // Obtener la venta
-    const venta = await entregaModel.getVentaById(ventaId);
-    if (!venta) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Venta no encontrada" 
-      });
-    }
-
-    // Mapear medioPago a metodoPagoId
-    let metodoPagoId;
-    
-    // Primera opción: verificar si medioPago es un número válido
-    if (!isNaN(medioPago) && parseInt(medioPago) > 0) {
-      metodoPagoId = parseInt(medioPago);
-    } else {
-      // Segunda opción: mapear desde string a ID
-      const medioPagoMap = {
-        'efectivo': 1,
-        'debito': 2,
-        'credito': 3,
-        'transferencia': 4,
-        'qr': 5,
-        'pendiente_caja': 6
-      };
+    // Si es un pago para otro día, sólo actualizamos la venta
+    if (pagoOtroDia && ventaId) {
+      const ventaActualizada = await entregaModel.marcarVentaParaPagoOtroDia(ventaId);
       
-      metodoPagoId = medioPagoMap[medioPago.toLowerCase()];
-    }
-  
-
-    // Obtener el negocioId de la venta o desde el request si está disponible
-    const negocioId = venta.negocioId || req.body.negocioId;
-    
-    if (!negocioId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "ID de negocio no encontrado" 
+      return res.status(200).json({
+        success: true,
+        message: 'Venta marcada para pago en otro día',
+        data: ventaActualizada
       });
     }
-
-    // Generar número de entrega
-    const nroEntrega = await generarNroEntrega();
     
-    let montoFinal = parseFloat(monto);
-    let nuevoTotalPagado, nuevoSaldoRestante;
-    
-    // Procesar según estadoPago
-    if (estadoPago === 1) { // Pendiente en caja
-      // No modificar totalPagado porque queda pendiente
-      nuevoTotalPagado = venta.totalPagado || 0;
-      montoFinal = parseFloat(venta.total_con_descuento || venta.total || 0);
-      nuevoSaldoRestante = venta.total - nuevoTotalPagado;
-    } else {
-      nuevoTotalPagado = (venta.totalPagado || 0) + montoFinal;
-      nuevoSaldoRestante = parseFloat(venta.total_con_descuento || venta.total || 0) - nuevoTotalPagado;
-      
-      // Validar que el monto no exceda el total
-      if (nuevoTotalPagado > parseFloat(venta.total_con_descuento || venta.total || 0)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "El monto excede el total de la venta" 
-        });
-      }
-    }
-
-    // Asegurar que montoFinal sea un entero si la BD espera Int
-    montoFinal = Math.round(montoFinal);
-
-    // Actualizar la venta con el nuevo estado de pago
-    await entregaModel.updateVenta(ventaId, {
-      estadoPago,
-      totalPagado: nuevoTotalPagado,
-      restoPendiente: nuevoSaldoRestante,
-    });
-
-    // Limpiar caché Redis si corresponde
-    const keys = await redisClient.keys("Ventas:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
-    await clearEntregaCache();
-
-    // Registrar la entrega/pago
-    const newEntrega = await entregaModel.addEntrega({
-      nroEntrega,
-      monto: montoFinal,
+    // Crear nueva entrega
+    const nuevaEntrega = await entregaModel.addEntrega({
+      monto,
       negocioId,
       metodoPagoId,
-      ventaId,
-      cajaId: cajaId || 1,
+      cajaId,
+      ventaId
     });
-
-    res.json({
+    
+    // Si tiene ID de venta, actualizar su estado
+    let ventaActualizada = null;
+    if (ventaId) {
+      ventaActualizada = await entregaModel.actualizarVentaPorEntrega(ventaId, monto);
+    }
+    
+    // Devolver respuesta exitosa
+    return res.status(201).json({
       success: true,
-      message: "Pago registrado correctamente",
-      data: newEntrega
+      message: 'Entrega creada correctamente',
+      data: {
+        entrega: nuevaEntrega,
+        venta: ventaActualizada
+      }
     });
+    
   } catch (error) {
-    console.error("Error al registrar el pago:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Error al registrar el pago" 
+    console.error('Error al crear entrega:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al procesar la solicitud',
+      error: error.message
     });
   }
 };

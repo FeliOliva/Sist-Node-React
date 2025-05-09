@@ -144,6 +144,7 @@ const getResumenDia = async (cajaId) => {
         nroVenta: true,
         total: true,
         cajaId: true,
+        estadoPago: true,
         negocio: {
           select: {
             id: true,
@@ -219,6 +220,7 @@ const getResumenDia = async (cajaId) => {
       tipo: "Venta",
       id: v.id,
       numero: v.nroVenta,
+      estado: v.estadoPago,
       monto: v.total,
       metodo_pago: null,
       negocio: v.negocio,

@@ -140,12 +140,82 @@ const getEntregasByNegocio = async (
 
 const addEntrega = async (data) => {
   try {
-    return await prisma.entregas.create({ data });
+    // Generar número de entrega automáticamente
+    const ultimaEntrega = await prisma.entregas.findFirst({
+      orderBy: { id: 'desc' },
+    });
+    
+    const nroEntrega = `E${String(ultimaEntrega ? ultimaEntrega.id + 1 : 1).padStart(5, '0')}`;
+    
+    // Crear nueva entrega con los datos proporcionados y el número generado
+    return await prisma.entregas.create({ 
+      data: {
+        ...data,
+        nroEntrega,
+        fechaCreacion: new Date()
+      },
+      include: {
+        negocio: {
+          select: {
+            nombre: true
+          }
+        },
+        metodoPago: {
+          select: {
+            nombre: true
+          }
+        }
+      }
+    });
   } catch (error) {
     console.error("Error agregando entrega:", error);
     throw new Error("Error al agregar la entrega");
   }
 };
+
+const actualizarVentaPorEntrega = async (ventaId, monto) => {
+  try {
+    // Obtener datos de la venta
+    const venta = await prisma.venta.findUnique({
+      where: { id: ventaId },
+    });
+    
+    if (!venta) {
+      throw new Error('No se encontró la venta asociada');
+    }
+    
+    // Calcular nuevo estado de pago y montos
+    const nuevoTotalPagado = venta.totalPagado + monto;
+    const nuevoRestoPendiente = venta.total - nuevoTotalPagado;
+    const nuevoEstadoPago = nuevoRestoPendiente <= 0 ? 2 : 1; // 2 = Pagado, 1 = Pendiente parcial
+    
+    // Actualizar la venta
+    return await prisma.venta.update({
+      where: { id: ventaId },
+      data: {
+        totalPagado: nuevoTotalPagado,
+        restoPendiente: nuevoRestoPendiente > 0 ? nuevoRestoPendiente : 0,
+        estadoPago: nuevoEstadoPago
+      }
+    });
+  } catch (error) {
+    console.error("Error actualizando venta:", error);
+    throw new Error("Error al actualizar la venta");
+  }
+};
+
+const marcarVentaParaPagoOtroDia = async (ventaId) => {
+  try {
+    return await prisma.venta.update({
+      where: { id: ventaId },
+      data: { estadoPago: 3 } // 3 = Pago aplazado para otro día
+    });
+  } catch (error) {
+    console.error("Error marcando venta para otro día:", error);
+    throw new Error("Error al marcar la venta para pago en otro día");
+  }
+};
+
 
 const updateEntrega = async (id, monto) => {
   try {
@@ -206,4 +276,6 @@ module.exports = {
   getVentaById,
   updateVenta,
   getUltimaEntregaDelDia,
+  actualizarVentaPorEntrega,
+  marcarVentaParaPagoOtroDia
 };

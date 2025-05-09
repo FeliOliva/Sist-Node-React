@@ -15,6 +15,7 @@ import {
   notification,
   Badge,
   InputNumber,
+  Select,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -27,6 +28,7 @@ import {
   CalendarOutlined,
   BellOutlined,
   ReloadOutlined,
+  BankOutlined,
 } from "@ant-design/icons";
 import { api } from "../../services/api";
 
@@ -41,10 +43,17 @@ const Entregas = () => {
   const [paymentError, setPaymentError] = useState("");
   const [payLater, setPayLater] = useState(false);
   const [hasNewVentas, setHasNewVentas] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
   const [form] = Form.useForm();
   const [wsConnected, setWsConnected] = useState(false);
   const [socket, setSocket] = useState(null);
-  const initialized = useRef(false); // Variable para controlar la inicialización del WebSocket
+  const [metodoPagos, setMetodoPagos] = useState([
+    { id: 1, nombre: "EFECTIVO" },
+    { id: 2, nombre: "TRANSFERENCIA/QR" },
+    { id: 3, nombre: "TARJETA DEBITO" },
+    { id: 4, nombre: "TARJETA CREDITO" },
+  ]);
+  const initialized = useRef(false);
 
   // Configurar WebSocket
   useEffect(() => {
@@ -139,9 +148,8 @@ const Entregas = () => {
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${
-                nuevaVenta.numero
-              } por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${nuevaVenta.numero
+                } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -199,6 +207,7 @@ const Entregas = () => {
     setPaymentAmount(entrega.monto.toString());
     setPayLater(false);
     setPaymentError("");
+    setPaymentMethod("EFECTIVO");
     setPaymentModalVisible(true);
   };
 
@@ -230,20 +239,44 @@ const Entregas = () => {
         return;
       }
 
-      // Aquí no llamamos a la API, solo procesamos localmente
-      console.log("Procesando pago:", {
-        entregaId: selectedEntrega.id,
-        monto: payLater ? 0 : parseFloat(paymentAmount),
-        pagoOtroDia: payLater,
-      });
+      const cajaId = sessionStorage.getItem("cajaId");
+      if (!cajaId) {
+        setPaymentError("No se encontró el ID de la caja activa");
+        setProcessingPayment(false);
+        return;
+      }
 
-      // Simulamos una actualización exitosa
+      // Obtener el ID del método de pago
+      const selectedMethodId = metodoPagos.find(
+        (metodo) => metodo.nombre === paymentMethod
+      )?.id || 1;
+
+      // Crear el objeto de datos para la API
+      const paymentData = {
+        monto: payLater ? 0 : parseFloat(paymentAmount),
+        metodoPagoId: payLater ? null : selectedMethodId,
+        cajaId: parseInt(cajaId),
+        negocioId: selectedEntrega.negocio?.id || 1,
+        ventaId: selectedEntrega.id,
+        pagoOtroDia: payLater
+      };
+
+      console.log("Enviando datos de pago:", paymentData);
+
+      // Llamar a la API para registrar la entrega
+      const response = await api("api/entregas", "POST", JSON.stringify(paymentData));
+      console.log("Respuesta de la API:", response);
+
+      // Actualizar la lista de entregas
       const updatedEntregas = entregas.map((item) => {
         if (item.id === selectedEntrega.id) {
           return {
             ...item,
-            metodo_pago: payLater ? "PENDIENTE_OTRO_DIA" : "EFECTIVO",
+            metodo_pago: payLater ? "PENDIENTE_OTRO_DIA" : paymentMethod,
             monto_pagado: payLater ? 0 : parseFloat(paymentAmount),
+            resto_pendiente: payLater
+              ? item.monto
+              : Math.max(0, item.monto - parseFloat(paymentAmount)),
           };
         }
         return item;
@@ -255,16 +288,19 @@ const Entregas = () => {
       setSelectedEntrega(null);
 
       // Mensaje de éxito
-      alert(
-        payLater
+      notification.success({
+        message: payLater ? "Pago aplazado" : "Pago procesado",
+        description: payLater
           ? "Entrega marcada para pago en otro día"
-          : "Entrega cobrada con éxito"
-      );
+          : `Entrega cobrada con éxito por ${formatMoney(parseFloat(paymentAmount))}`,
+        icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
+      });
     } catch (error) {
       console.error("Error al procesar el pago:", error);
       setPaymentError("Error al procesar el pago. Intente nuevamente.");
     } finally {
       setProcessingPayment(false);
+      location.reload();
     }
   };
 
@@ -305,23 +341,13 @@ const Entregas = () => {
                 Desconectado
               </Tag>
             )}
-
-            <Badge dot={hasNewVentas} offset={[-5, 0]}>
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={fetchEntregas}
-                title="Actualizar entregas"
-              >
-                Actualizar
-              </Button>
-            </Badge>
           </div>
         </div>
 
         <div className="space-y-4">
           {entregas.map((entrega, index) => (
             <Card
+              key={entrega.id}
               className="shadow-md rounded-lg border-l-4 hover:shadow-lg transition-shadow"
               style={{
                 borderLeftColor: entrega.metodo_pago ? "#10b981" : "#f59e0b",
@@ -350,21 +376,21 @@ const Entregas = () => {
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  {entrega.metodo_pago ? (
-                    entrega.metodo_pago === "PENDIENTE_OTRO_DIA" ? (
+                  {entrega.tipo === "Venta" ? (
+                    entrega.estado === 3 ? (
                       <Tag icon={<CalendarOutlined />} color="processing">
                         PAGO OTRO DÍA
                       </Tag>
-                    ) : (
+                    ) : entrega.estado === 2 ? (
                       <Tag icon={<CheckCircleOutlined />} color="success">
                         COBRADA
                       </Tag>
+                    ) : (
+                      <Tag icon={<ClockCircleOutlined />} color="warning">
+                        PENDIENTE
+                      </Tag>
                     )
-                  ) : (
-                    <Tag icon={<ClockCircleOutlined />} color="warning">
-                      PENDIENTE
-                    </Tag>
-                  )}
+                  ) : null}
 
                   <div className="flex gap-2 mt-2">
                     <Button
@@ -375,7 +401,7 @@ const Entregas = () => {
                       Ver Detalles
                     </Button>
 
-                    {!entrega.metodo_pago && (
+                    {(entrega.tipo !== "Venta" || entrega.estado === 1 || entrega.estado === 3) && !entrega.metodo_pago && (
                       <Button
                         type="primary"
                         size="small"
@@ -405,7 +431,7 @@ const Entregas = () => {
           <Button key="back" onClick={handleCloseDetailsModal}>
             Cerrar
           </Button>,
-          !selectedEntrega?.metodo_pago && (
+          selectedEntrega?.tipo !== "Venta" && !selectedEntrega?.metodo_pago && (
             <Button
               key="cobrar"
               type="primary"
@@ -441,8 +467,8 @@ const Entregas = () => {
                   {selectedEntrega.metodo_pago === "PENDIENTE_OTRO_DIA"
                     ? "PAGO OTRO DÍA"
                     : selectedEntrega.metodo_pago
-                    ? "COBRADA"
-                    : "PENDIENTE"}
+                      ? "COBRADA"
+                      : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.metodo_pago !== "PENDIENTE_OTRO_DIA" && (
@@ -504,6 +530,7 @@ const Entregas = () => {
             type="primary"
             loading={processingPayment}
             onClick={handleSubmitPayment}
+            
           >
             {payLater ? "Guardar" : "Cobrar"}
           </Button>,
@@ -533,26 +560,62 @@ const Entregas = () => {
             </Checkbox>
           </Form.Item>
 
-          <Form.Item
-            label="Monto recibido"
-            className="mb-4"
-            tooltip={
-              payLater
-                ? "Desactive 'Pagar otro día' para ingresar un monto"
-                : ""
-            }
-          >
-            <Input
-              prefix={<DollarOutlined />}
-              placeholder="Ingrese el monto recibido"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              disabled={payLater}
-              type="number"
-              min="0"
-              step="0.01"
-            />
-          </Form.Item>
+          {!payLater && (
+            <>
+              <Form.Item label="Método de pago" className="mb-4">
+                <Select
+                  value={paymentMethod}
+                  onChange={setPaymentMethod}
+                  disabled={payLater}
+                  className="w-full"
+                  placeholder="Seleccione un método de pago"
+                >
+                  {metodoPagos.map((metodo) => (
+                    <Select.Option key={metodo.id} value={metodo.nombre}>
+                      {metodo.nombre}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                label="Monto recibido"
+                className="mb-4"
+                tooltip={
+                  payLater
+                    ? "Desactive 'Pagar otro día' para ingresar un monto"
+                    : ""
+                }
+              >
+                <Input
+                  prefix={<DollarOutlined />}
+                  placeholder="Ingrese el monto recibido"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  disabled={payLater}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                />
+              </Form.Item>
+            </>
+          )}
+
+          {paymentMethod === "EFECTIVO" && !payLater && (
+            <Form.Item label="Vuelto" className="mb-4">
+              <Input
+                prefix={<DollarOutlined />}
+                readOnly
+                value={
+                  paymentAmount && !isNaN(parseFloat(paymentAmount))
+                    ? formatMoney(
+                      Math.max(0, parseFloat(paymentAmount) - (selectedEntrega?.monto || 0))
+                    )
+                    : "$0"
+                }
+              />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>

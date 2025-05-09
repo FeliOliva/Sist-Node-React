@@ -74,7 +74,7 @@ const AppRouter = () => {
                     <Route path="ventas" element={<Unauthorized />} />
                   </>
                 )}
-                <Route path="*" element={<h1>404 - Página no encontrada</h1>} />
+                <Route path="*" element={<Navigate to="/ventas" />} />
               </Route>
             )}
           </>
