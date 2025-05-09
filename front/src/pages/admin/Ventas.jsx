@@ -220,7 +220,9 @@ const Ventas = () => {
 
             // Obtener información de la caja para cada venta
             const cajasData = await api("api/caja");
-            const caja = (cajasData.cajas || cajasData)?.find((c) => c.id === venta.cajaId);
+            const caja = (cajasData.cajas || cajasData)?.find(
+              (c) => c.id === venta.cajaId
+            );
             return {
               ...venta,
               negocioNombre: negocio ? negocio.nombre : "Desconocido",
@@ -350,14 +352,9 @@ const Ventas = () => {
     0
   );
 
-  const obtenerProximoNumeroVenta = () => {
-    const maxNro = ventas.reduce((max, v) => {
-      const match = v.nroVenta?.match(/^V(\d+)$/);
-      const num = match ? parseInt(match[1]) : 0;
-      return num > max ? num : max;
-    }, 0);
-    const nuevoNumero = maxNro + 1;
-    return `V${nuevoNumero.toString().padStart(5, "0")}`;
+  const generarNumeroVentaAleatorio = () => {
+    const numeroAleatorio = Math.floor(10000 + Math.random() * 90000);
+    return `V${numeroAleatorio}`;
   };
 
   const guardarVenta = async () => {
@@ -377,7 +374,7 @@ const Ventas = () => {
     try {
       const nroVenta = ventaEditando
         ? ventaEditando.nroVenta
-        : obtenerProximoNumeroVenta();
+        : generarNumeroVentaAleatorio();
 
       const detalles = productosSeleccionados.map((producto) => ({
         precio: producto.precio,

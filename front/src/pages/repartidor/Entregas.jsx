@@ -14,6 +14,7 @@ import {
   Alert,
   notification,
   Badge,
+  InputNumber,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -43,7 +44,7 @@ const Entregas = () => {
   const [form] = Form.useForm();
   const [wsConnected, setWsConnected] = useState(false);
   const [socket, setSocket] = useState(null);
-  const  initialized = useRef(false); // Variable para controlar la inicialización del WebSocket
+  const initialized = useRef(false); // Variable para controlar la inicialización del WebSocket
 
   // Configurar WebSocket
   useEffect(() => {
@@ -88,7 +89,7 @@ const Entregas = () => {
           // Si es la carga inicial de ventas, actualizamos el estado
           if (mensaje.data && mensaje.data.length > 0) {
             // Transformar los datos si es necesario para que coincidan con el formato esperado
-            const nuevasVentas = mensaje.data.map(venta => ({
+            const nuevasVentas = mensaje.data.map((venta) => ({
               id: venta.id,
               tipo: "Venta",
               numero: venta.nroVenta,
@@ -97,18 +98,18 @@ const Entregas = () => {
               resto_pendiente: venta.restoPendiente,
               metodo_pago: venta.estadoPago === 1 ? null : "EFECTIVO", // Asumimos que 1 = pendiente
               negocio: { nombre: `Negocio #${venta.negocio?.nombre}` }, // Ajusta esto según tus datos
-              detalles: venta.detalles.map(detalle => ({
+              detalles: venta.detalles.map((detalle) => ({
                 cantidad: detalle.cantidad,
                 precio: detalle.precio,
                 subTotal: detalle.subTotal,
                 producto: {
-                  nombre: `Producto #${detalle.productoId}` // Ajusta esto según tus datos
-                }
-              }))
+                  nombre: `Producto #${detalle.productoId}`, // Ajusta esto según tus datos
+                },
+              })),
             }));
 
             // Si estamos en la carga inicial, reemplazamos todo
-            setEntregas(prevEntregas => [...prevEntregas, ...nuevasVentas]);
+            setEntregas((prevEntregas) => [...prevEntregas, ...nuevasVentas]);
           }
         } else if (mensaje.tipo === "nueva-venta") {
           // Si es una nueva venta, la agregamos a la lista y mostramos notificación
@@ -122,23 +123,25 @@ const Entregas = () => {
               resto_pendiente: mensaje.data.restoPendiente,
               metodo_pago: mensaje.data.estadoPago === 1 ? null : "EFECTIVO",
               negocio: { nombre: `Negocio #${mensaje.data.negocio?.nombre}` },
-              detalles: mensaje.data.detalles.map(detalle => ({
+              detalles: mensaje.data.detalles.map((detalle) => ({
                 cantidad: detalle.cantidad,
                 precio: detalle.precio,
                 subTotal: detalle.subTotal,
                 producto: {
-                  nombre: `Producto #${detalle.productoId}`
-                }
-              }))
+                  nombre: `Producto #${detalle.productoId}`,
+                },
+              })),
             };
 
-            setEntregas(prevEntregas => [nuevaVenta, ...prevEntregas]);
+            setEntregas((prevEntregas) => [nuevaVenta, ...prevEntregas]);
             setHasNewVentas(true);
 
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${nuevaVenta.numero} por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${
+                nuevaVenta.numero
+              } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -438,8 +441,8 @@ const Entregas = () => {
                   {selectedEntrega.metodo_pago === "PENDIENTE_OTRO_DIA"
                     ? "PAGO OTRO DÍA"
                     : selectedEntrega.metodo_pago
-                      ? "COBRADA"
-                      : "PENDIENTE"}
+                    ? "COBRADA"
+                    : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.metodo_pago !== "PENDIENTE_OTRO_DIA" && (
