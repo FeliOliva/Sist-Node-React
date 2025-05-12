@@ -139,7 +139,6 @@ const getVentasByNegocio = async (req, res) => {
 const addVenta = async (req, res) => {
   try {
     const { nroVenta, negocioId, cajaId, rol_usuario, detalles } = req.body;
-
     if (rol_usuario !== 0 && rol_usuario !== 1) {
       return res
         .status(401)
@@ -187,7 +186,9 @@ const addVenta = async (req, res) => {
       detalles: detallesProcesados,
     });
 
-    broadcastNuevaVenta(venta);
+    const ventaConNegocio = await ventaModel.getVentaById(venta.id);
+
+    broadcastNuevaVenta(ventaConNegocio);
 
     res.status(200).json(venta);
   } catch (error) {

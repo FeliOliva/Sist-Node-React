@@ -97,7 +97,7 @@ const Entregas = () => {
         if (mensaje.tipo === "ventas-iniciales") {
           // Si es la carga inicial de ventas, actualizamos el estado
           if (mensaje.data && mensaje.data.length > 0) {
-            // Transformar los datos si es necesario para que coincidan con el formato esperado
+            // Transformar los datos para que coincidan con el formato esperado
             const nuevasVentas = mensaje.data.map((venta) => ({
               id: venta.id,
               tipo: "Venta",
@@ -105,20 +105,31 @@ const Entregas = () => {
               monto: venta.total,
               monto_pagado: venta.totalPagado,
               resto_pendiente: venta.restoPendiente,
-              metodo_pago: venta.estadoPago === 1 ? null : "EFECTIVO", // Asumimos que 1 = pendiente
-              negocio: { nombre: `Negocio #${venta.negocio?.nombre}` }, // Ajusta esto según tus datos
+              metodo_pago: venta.estadoPago === 1 ? null : "EFECTIVO", // 1 = pendiente
+              estado: venta.estadoPago,
+              negocio: {
+                id: venta.negocio?.id || venta.negocioId,
+                nombre: venta.negocio?.nombre || `Negocio #${venta.negocioId}`,
+              },
               detalles: venta.detalles.map((detalle) => ({
+                id: detalle.id,
                 cantidad: detalle.cantidad,
                 precio: detalle.precio,
                 subTotal: detalle.subTotal,
                 producto: {
-                  nombre: `Producto #${detalle.productoId}`, // Ajusta esto según tus datos
+                  id: detalle.productoId,
+                  nombre: `Producto #${detalle.productoId}`,
                 },
               })),
             }));
 
-            // Si estamos en la carga inicial, reemplazamos todo
-            setEntregas((prevEntregas) => [...prevEntregas, ...nuevasVentas]);
+            // Actualizamos la lista de entregas con los datos del WebSocket
+            setEntregas(nuevasVentas);
+            // Cambiamos el estado de carga
+            setLoading(false);
+          } else {
+            // Si no hay ventas iniciales, simplemente quitamos el estado de carga
+            setLoading(false);
           }
         } else if (mensaje.tipo === "nueva-venta") {
           // Si es una nueva venta, la agregamos a la lista y mostramos notificación
@@ -131,12 +142,20 @@ const Entregas = () => {
               monto_pagado: mensaje.data.totalPagado,
               resto_pendiente: mensaje.data.restoPendiente,
               metodo_pago: mensaje.data.estadoPago === 1 ? null : "EFECTIVO",
-              negocio: { nombre: `Negocio #${mensaje.data.negocio?.nombre}` },
+              estado: mensaje.data.estadoPago,
+              negocio: {
+                id: mensaje.data.negocio?.id || mensaje.data.negocioId,
+                nombre:
+                  mensaje.data.negocio?.nombre ||
+                  `Negocio #${mensaje.data.negocioId}`,
+              },
               detalles: mensaje.data.detalles.map((detalle) => ({
+                id: detalle.id,
                 cantidad: detalle.cantidad,
                 precio: detalle.precio,
                 subTotal: detalle.subTotal,
                 producto: {
+                  id: detalle.productoId,
                   nombre: `Producto #${detalle.productoId}`,
                 },
               })),
@@ -148,8 +167,9 @@ const Entregas = () => {
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${nuevaVenta.numero
-                } por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${
+                nuevaVenta.numero
+              } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -168,29 +188,6 @@ const Entregas = () => {
       }
     };
   }, []); // Este efecto solo se ejecuta una vez al montar el componente
-
-  // Cargar entregas iniciales
-  useEffect(() => {
-    fetchEntregas();
-  }, []);
-
-  const fetchEntregas = async () => {
-    try {
-      setLoading(true);
-      const cajaId = sessionStorage.getItem("cajaId");
-      console.log("cajaId", cajaId);
-      if (!cajaId) throw new Error("No hay cajaId en sessionStorage");
-
-      const data = await api(`api/resumenDia?cajaId=${cajaId}`, "GET");
-      console.log("Resumen del día:", data);
-      setEntregas(data);
-      setHasNewVentas(false); // Resetear el indicador de nuevas ventas
-    } catch (error) {
-      console.error("Error cargando entregas:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleViewDetails = (entrega) => {
     setSelectedEntrega(entrega);
@@ -247,9 +244,8 @@ const Entregas = () => {
       }
 
       // Obtener el ID del método de pago
-      const selectedMethodId = metodoPagos.find(
-        (metodo) => metodo.nombre === paymentMethod
-      )?.id || 1;
+      const selectedMethodId =
+        metodoPagos.find((metodo) => metodo.nombre === paymentMethod)?.id || 1;
 
       // Crear el objeto de datos para la API
       const paymentData = {
@@ -258,13 +254,17 @@ const Entregas = () => {
         cajaId: parseInt(cajaId),
         negocioId: selectedEntrega.negocio?.id || 1,
         ventaId: selectedEntrega.id,
-        pagoOtroDia: payLater
+        pagoOtroDia: payLater,
       };
 
       console.log("Enviando datos de pago:", paymentData);
 
       // Llamar a la API para registrar la entrega
-      const response = await api("api/entregas", "POST", JSON.stringify(paymentData));
+      const response = await api(
+        "api/entregas",
+        "POST",
+        JSON.stringify(paymentData)
+      );
       console.log("Respuesta de la API:", response);
 
       // Actualizar la lista de entregas
@@ -273,6 +273,7 @@ const Entregas = () => {
           return {
             ...item,
             metodo_pago: payLater ? "PENDIENTE_OTRO_DIA" : paymentMethod,
+            estado: payLater ? 3 : 2, // 3 = PAGO OTRO DÍA, 2 = COBRADA
             monto_pagado: payLater ? 0 : parseFloat(paymentAmount),
             resto_pendiente: payLater
               ? item.monto
@@ -292,7 +293,9 @@ const Entregas = () => {
         message: payLater ? "Pago aplazado" : "Pago procesado",
         description: payLater
           ? "Entrega marcada para pago en otro día"
-          : `Entrega cobrada con éxito por ${formatMoney(parseFloat(paymentAmount))}`,
+          : `Entrega cobrada con éxito por ${formatMoney(
+              parseFloat(paymentAmount)
+            )}`,
         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
       });
     } catch (error) {
@@ -300,7 +303,8 @@ const Entregas = () => {
       setPaymentError("Error al procesar el pago. Intente nuevamente.");
     } finally {
       setProcessingPayment(false);
-      location.reload();
+      // Comentamos el reload para que no se recargue la página y perder el estado
+      // location.reload();
     }
   };
 
@@ -308,6 +312,7 @@ const Entregas = () => {
     return `$${Number(amount).toLocaleString()}`;
   };
 
+  // Renderizado condicional basado en estado de carga
   if (loading) {
     return (
       <div className="flex justify-center items-center h-80">
@@ -316,7 +321,8 @@ const Entregas = () => {
     );
   }
 
-  if (!entregas || !entregas.length) {
+  // Verificar si hay entregas para mostrar
+  if (!entregas || entregas.length === 0) {
     return (
       <div className="flex justify-center items-center h-80">
         <Empty description="No hay entregas para mostrar" />
@@ -341,11 +347,16 @@ const Entregas = () => {
                 Desconectado
               </Tag>
             )}
+            {hasNewVentas && (
+              <Badge count="Nuevo" color="#1890ff">
+                <BellOutlined />
+              </Badge>
+            )}
           </div>
         </div>
 
         <div className="space-y-4">
-          {entregas.map((entrega, index) => (
+          {entregas.map((entrega) => (
             <Card
               key={entrega.id}
               className="shadow-md rounded-lg border-l-4 hover:shadow-lg transition-shadow"
@@ -401,15 +412,16 @@ const Entregas = () => {
                       Ver Detalles
                     </Button>
 
-                    {(entrega.tipo !== "Venta" || entrega.estado === 1 || entrega.estado === 3) && !entrega.metodo_pago && (
-                      <Button
-                        type="primary"
-                        size="small"
-                        onClick={() => handleOpenPaymentModal(entrega)}
-                      >
-                        Cobrar
-                      </Button>
-                    )}
+                    {(entrega.estado === 1 || entrega.estado === 3) &&
+                      !entrega.metodo_pago && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={() => handleOpenPaymentModal(entrega)}
+                        >
+                          Cobrar
+                        </Button>
+                      )}
                   </div>
                 </div>
               </div>
@@ -431,7 +443,7 @@ const Entregas = () => {
           <Button key="back" onClick={handleCloseDetailsModal}>
             Cerrar
           </Button>,
-          selectedEntrega?.tipo !== "Venta" && !selectedEntrega?.metodo_pago && (
+          selectedEntrega && selectedEntrega.estado === 1 && (
             <Button
               key="cobrar"
               type="primary"
@@ -464,14 +476,14 @@ const Entregas = () => {
               <div>
                 <p>
                   <strong>Estado:</strong>{" "}
-                  {selectedEntrega.metodo_pago === "PENDIENTE_OTRO_DIA"
+                  {selectedEntrega.estado === 3
                     ? "PAGO OTRO DÍA"
-                    : selectedEntrega.metodo_pago
-                      ? "COBRADA"
-                      : "PENDIENTE"}
+                    : selectedEntrega.estado === 2
+                    ? "COBRADA"
+                    : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
-                  selectedEntrega.metodo_pago !== "PENDIENTE_OTRO_DIA" && (
+                  selectedEntrega.estado !== 3 && (
                     <p>
                       <strong>Método de pago:</strong>{" "}
                       {selectedEntrega.metodo_pago}
@@ -480,6 +492,11 @@ const Entregas = () => {
                 <p className="text-xl font-bold text-green-600">
                   {formatMoney(selectedEntrega.monto)}
                 </p>
+                {selectedEntrega.resto_pendiente > 0 && (
+                  <p className="text-sm text-orange-500">
+                    Pendiente: {formatMoney(selectedEntrega.resto_pendiente)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -530,7 +547,6 @@ const Entregas = () => {
             type="primary"
             loading={processingPayment}
             onClick={handleSubmitPayment}
-            
           >
             {payLater ? "Guardar" : "Cobrar"}
           </Button>,
@@ -609,8 +625,12 @@ const Entregas = () => {
                 value={
                   paymentAmount && !isNaN(parseFloat(paymentAmount))
                     ? formatMoney(
-                      Math.max(0, parseFloat(paymentAmount) - (selectedEntrega?.monto || 0))
-                    )
+                        Math.max(
+                          0,
+                          parseFloat(paymentAmount) -
+                            (selectedEntrega?.monto || 0)
+                        )
+                      )
                     : "$0"
                 }
               />

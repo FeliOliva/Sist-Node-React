@@ -127,6 +127,9 @@ const getVentaById = async (id) => {
     return await prisma.venta.findUnique({
       where: { id: parseInt(id) },
       include: {
+        negocio: {
+          select: { nombre: true },
+        },
         detalles: {
           include: {
             producto: {
