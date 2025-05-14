@@ -175,6 +175,23 @@ const Entregas = () => {
               duration: 5,
             });
           }
+        } else if (mensaje.tipo === "venta-eliminada") {
+          const idEliminado = mensaje.data?.id;
+          if (idEliminado) {
+            setEntregas((prevEntregas) =>
+              prevEntregas.filter(
+                (venta) => venta.id.toString() !== idEliminado.toString()
+              )
+            );
+
+            notification.warning({
+              message: "Venta eliminada",
+              description: `Se ha eliminado la venta con ID #${idEliminado}`,
+              icon: <ReloadOutlined style={{ color: "#faad14" }} />,
+              placement: "topRight",
+              duration: 5,
+            });
+          }
         }
       } catch (error) {
         console.error("Error al procesar mensaje WebSocket:", error);

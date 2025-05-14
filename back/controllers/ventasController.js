@@ -1,6 +1,6 @@
 const ventaModel = require("../models/ventaModel");
 const { redisClient } = require("../db");
-const { broadcastNuevaVenta } = require("../websocket");
+const { broadcastNuevaVenta, eliminarVenta } = require("../websocket");
 
 const getVentas = async (req, res) => {
   try {
@@ -200,6 +200,7 @@ const addVenta = async (req, res) => {
 const dropVenta = async (req, res) => {
   try {
     const { id } = req.params;
+    const { cajaId } = req.query;
     if (!id) {
       return res.status(400).json({ error: "El id es obligatorio" });
     }
@@ -207,6 +208,7 @@ const dropVenta = async (req, res) => {
     if (keys.length > 0) {
       await redisClient.del(keys);
     }
+    eliminarVenta(cajaId, id);
     const ventaData = await ventaModel.dropVenta(id);
     res.status(200).json(ventaData);
   } catch (error) {

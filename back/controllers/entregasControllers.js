@@ -1,37 +1,36 @@
 const entregaModel = require("../models/entregaModel");
 const { redisClient } = require("../db");
-
-
+const { actualizarVenta } = require("../websocket");
 
 const generarNroEntrega = async () => {
   try {
     // Obtener la fecha actual en formato AAAAMMDD
     const hoy = new Date();
     const anio = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+    const dia = String(hoy.getDate()).padStart(2, "0");
     const fechaStr = `${anio}${mes}${dia}`;
-    
+
     // Buscar la última entrega del día para determinar el siguiente número secuencial
     const ultimaEntrega = await entregaModel.getUltimaEntregaDelDia();
-    
+
     let numeroSecuencial = 1; // Valor por defecto si no hay entregas previas
-    
+
     if (ultimaEntrega && ultimaEntrega.nroEntrega) {
       // Verificar si la última entrega es del mismo día
-      const partes = ultimaEntrega.nroEntrega.split('-');
+      const partes = ultimaEntrega.nroEntrega.split("-");
       if (partes.length === 2 && partes[0] === fechaStr) {
         // Si es del mismo día, incrementar el contador
         numeroSecuencial = parseInt(partes[1]) + 1;
       }
     }
-    
+
     // Formatear el número secuencial con ceros a la izquierda
-    const secuencialStr = String(numeroSecuencial).padStart(4, '0');
-    
+    const secuencialStr = String(numeroSecuencial).padStart(4, "0");
+
     // Combinar para formar el número de entrega completo
     const nroEntrega = `${fechaStr}-${secuencialStr}`;
-    
+
     return nroEntrega;
   } catch (error) {
     console.error("Error al generar número de entrega:", error);
@@ -40,7 +39,6 @@ const generarNroEntrega = async () => {
     return `E${timestamp}`;
   }
 };
-
 
 const clearEntregaCache = async () => {
   try {
@@ -184,58 +182,64 @@ const getEntregasByNegocio = async (req, res) => {
 
 const addEntrega = async (req, res) => {
   try {
-    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } = req.body;
-    
+    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } =
+      req.body;
+
     // Validar los datos recibidos
     if ((!monto && !pagoOtroDia) || !cajaId || !negocioId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Faltan datos requeridos para crear la entrega' 
+      return res.status(400).json({
+        success: false,
+        message: "Faltan datos requeridos para crear la entrega",
       });
     }
 
     // Si es un pago para otro día, sólo actualizamos la venta
     if (pagoOtroDia && ventaId) {
-      const ventaActualizada = await entregaModel.marcarVentaParaPagoOtroDia(ventaId);
-      
+      const ventaActualizada = await entregaModel.marcarVentaParaPagoOtroDia(
+        ventaId
+      );
+      actualizarVenta(cajaId, ventaActualizada, estadoSocket);
       return res.status(200).json({
         success: true,
-        message: 'Venta marcada para pago en otro día',
-        data: ventaActualizada
+        message: "Venta marcada para pago en otro día",
+        data: ventaActualizada,
       });
     }
-    
+
     // Crear nueva entrega
     const nuevaEntrega = await entregaModel.addEntrega({
       monto,
       negocioId,
       metodoPagoId,
       cajaId,
-      ventaId
+      ventaId,
     });
-    
+
     // Si tiene ID de venta, actualizar su estado
     let ventaActualizada = null;
     if (ventaId) {
-      ventaActualizada = await entregaModel.actualizarVentaPorEntrega(ventaId, monto);
+      ventaActualizada = await entregaModel.actualizarVentaPorEntrega(
+        ventaId,
+        monto
+      );
+      actualizarVenta(cajaId, ventaActualizada);
     }
-    
+
     // Devolver respuesta exitosa
     return res.status(201).json({
       success: true,
-      message: 'Entrega creada correctamente',
+      message: "Entrega creada correctamente",
       data: {
         entrega: nuevaEntrega,
-        venta: ventaActualizada
-      }
+        venta: ventaActualizada,
+      },
     });
-    
   } catch (error) {
-    console.error('Error al crear entrega:', error);
+    console.error("Error al crear entrega:", error);
     return res.status(500).json({
       success: false,
-      message: 'Error al procesar la solicitud',
-      error: error.message
+      message: "Error al procesar la solicitud",
+      error: error.message,
     });
   }
 };
@@ -274,8 +278,6 @@ const dropEntrega = async (req, res) => {
     res.status(500).json({ error: "Error al eliminar la entrega" });
   }
 };
-
-
 
 module.exports = {
   getEntregas,

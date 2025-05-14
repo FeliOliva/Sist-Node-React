@@ -453,9 +453,10 @@ const Ventas = () => {
     }
   };
 
-  const eliminarVenta = async (id) => {
+  const eliminarVenta = async (id, cajaId) => {
+    console.log("eliminarVenta", id, cajaId);
     try {
-      await api(`api/ventas/${id}`, "DELETE");
+      await api(`api/ventas/${id}?cajaId=${cajaId}`, "DELETE");
       message.success("Venta eliminada correctamente");
       setVentas((prev) => prev.filter((venta) => venta.id !== id));
     } catch (error) {
@@ -572,7 +573,7 @@ const Ventas = () => {
                 okText: "Sí, eliminar",
                 okType: "danger",
                 cancelText: "Cancelar",
-                onOk: () => eliminarVenta(record.id),
+                onOk: () => eliminarVenta(record.id, record.cajaId),
               });
             }}
           >

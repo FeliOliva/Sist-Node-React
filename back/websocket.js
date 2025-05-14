@@ -144,8 +144,67 @@ function broadcastNuevaVenta(venta) {
   }
 }
 
+function eliminarVenta(cajaId, ventaId) {
+  if (!ventasPorCaja[cajaId]) return;
+  // Eliminar del array en memoria
+  ventasPorCaja[cajaId] = ventasPorCaja[cajaId].filter(
+    (venta) => venta.id !== Number(ventaId)
+  );
+
+  // Notificar a todos los clientes conectados a esa caja
+  const mensaje = {
+    tipo: "venta-eliminada",
+    data: { id: ventaId },
+  };
+
+  if (connections[cajaId]) {
+    connections[cajaId].forEach((ws) => {
+      if (ws.readyState === 1) {
+        try {
+          ws.send(JSON.stringify(mensaje));
+        } catch (error) {
+          console.error(
+            `Error al enviar eliminación a cliente de caja ${cajaId}:`,
+            error
+          );
+        }
+      }
+    });
+  }
+}
+
+function actualizarVenta(cajaId, ventaActualizada, tipo = "venta-actualizada") {
+  if (!ventasPorCaja[cajaId]) return;
+
+  ventasPorCaja[cajaId] = ventasPorCaja[cajaId].map((venta) =>
+    venta.id === ventaActualizada.id ? ventaActualizada : venta
+  );
+
+  const mensaje = {
+    tipo,
+    data: ventaActualizada, // <- CORREGIDO AQUÍ
+  };
+
+  if (connections[cajaId]) {
+    connections[cajaId].forEach((ws) => {
+      if (ws.readyState === 1) {
+        try {
+          ws.send(JSON.stringify(mensaje));
+        } catch (error) {
+          console.error(
+            `Error al enviar actualización a cliente de caja ${cajaId}:`,
+            error
+          );
+        }
+      }
+    });
+  }
+}
+
 module.exports = {
   setupWebSocket,
   broadcastNuevaVenta,
   enviarNuevaVenta,
+  eliminarVenta,
+  actualizarVenta,
 };

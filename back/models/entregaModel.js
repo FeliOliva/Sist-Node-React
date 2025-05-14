@@ -142,30 +142,32 @@ const addEntrega = async (data) => {
   try {
     // Generar número de entrega automáticamente
     const ultimaEntrega = await prisma.entregas.findFirst({
-      orderBy: { id: 'desc' },
+      orderBy: { id: "desc" },
     });
-    
-    const nroEntrega = `E${String(ultimaEntrega ? ultimaEntrega.id + 1 : 1).padStart(5, '0')}`;
-    
+
+    const nroEntrega = `E${String(
+      ultimaEntrega ? ultimaEntrega.id + 1 : 1
+    ).padStart(5, "0")}`;
+
     // Crear nueva entrega con los datos proporcionados y el número generado
-    return await prisma.entregas.create({ 
+    return await prisma.entregas.create({
       data: {
         ...data,
         nroEntrega,
-        fechaCreacion: new Date()
+        fechaCreacion: new Date(),
       },
       include: {
         negocio: {
           select: {
-            nombre: true
-          }
+            nombre: true,
+          },
         },
         metodoPago: {
           select: {
-            nombre: true
-          }
-        }
-      }
+            nombre: true,
+          },
+        },
+      },
     });
   } catch (error) {
     console.error("Error agregando entrega:", error);
@@ -175,29 +177,43 @@ const addEntrega = async (data) => {
 
 const actualizarVentaPorEntrega = async (ventaId, monto) => {
   try {
-    // Obtener datos de la venta
     const venta = await prisma.venta.findUnique({
       where: { id: ventaId },
     });
-    
+
     if (!venta) {
-      throw new Error('No se encontró la venta asociada');
+      throw new Error("No se encontró la venta asociada");
     }
-    
-    // Calcular nuevo estado de pago y montos
+
     const nuevoTotalPagado = venta.totalPagado + monto;
     const nuevoRestoPendiente = venta.total - nuevoTotalPagado;
-    const nuevoEstadoPago = nuevoRestoPendiente <= 0 ? 2 : 1; // 2 = Pagado, 1 = Pendiente parcial
-    
-    // Actualizar la venta
-    return await prisma.venta.update({
+
+    // Nueva lógica: 2 = pagado completo, 5 = pagado parcialmente
+    let nuevoEstadoPago;
+    let estadoSocket;
+
+    if (nuevoRestoPendiente <= 0) {
+      nuevoEstadoPago = 2;
+      estadoSocket = "venta-pagada";
+    } else {
+      nuevoEstadoPago = 5;
+      estadoSocket = "venta-pagada-parcialmente";
+    }
+
+    const ventaActualizada = await prisma.venta.update({
       where: { id: ventaId },
       data: {
         totalPagado: nuevoTotalPagado,
         restoPendiente: nuevoRestoPendiente > 0 ? nuevoRestoPendiente : 0,
-        estadoPago: nuevoEstadoPago
-      }
+        estadoPago: nuevoEstadoPago,
+      },
+      include: {
+        detalles: true,
+      },
     });
+
+    // Devolvemos la venta y el estado para el socket
+    return { venta: ventaActualizada, estadoSocket };
   } catch (error) {
     console.error("Error actualizando venta:", error);
     throw new Error("Error al actualizar la venta");
@@ -208,14 +224,16 @@ const marcarVentaParaPagoOtroDia = async (ventaId) => {
   try {
     return await prisma.venta.update({
       where: { id: ventaId },
-      data: { estadoPago: 3 } // 3 = Pago aplazado para otro día
+      data: { estadoPago: 3 },
+      include: {
+        detalles: true,
+      },
     });
   } catch (error) {
     console.error("Error marcando venta para otro día:", error);
     throw new Error("Error al marcar la venta para pago en otro día");
   }
 };
-
 
 const updateEntrega = async (id, monto) => {
   try {
@@ -240,25 +258,36 @@ const dropEntrega = async (id) => {
   }
 };
 
-
 const getUltimaEntregaDelDia = async () => {
   try {
     const hoy = new Date();
-    const inicioDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const finDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
-    
+    const inicioDelDia = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth(),
+      hoy.getDate()
+    );
+    const finDelDia = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth(),
+      hoy.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+
     const ultimaEntrega = await prisma.entregas.findFirst({
       where: {
         fechaCreacion: {
           gte: inicioDelDia,
-          lte: finDelDia
-        }
+          lte: finDelDia,
+        },
       },
       orderBy: {
-        id: 'desc'
-      }
+        id: "desc",
+      },
     });
-    
+
     return ultimaEntrega;
   } catch (error) {
     console.error("Error al obtener la última entrega del día:", error);
@@ -277,5 +306,5 @@ module.exports = {
   updateVenta,
   getUltimaEntregaDelDia,
   actualizarVentaPorEntrega,
-  marcarVentaParaPagoOtroDia
+  marcarVentaParaPagoOtroDia,
 };
