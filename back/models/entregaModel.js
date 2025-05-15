@@ -188,7 +188,6 @@ const actualizarVentaPorEntrega = async (ventaId, monto) => {
     const nuevoTotalPagado = venta.totalPagado + monto;
     const nuevoRestoPendiente = venta.total - nuevoTotalPagado;
 
-    // Nueva lógica: 2 = pagado completo, 5 = pagado parcialmente
     let nuevoEstadoPago;
     let estadoSocket;
 
@@ -212,7 +211,6 @@ const actualizarVentaPorEntrega = async (ventaId, monto) => {
       },
     });
 
-    // Devolvemos la venta y el estado para el socket
     return { venta: ventaActualizada, estadoSocket };
   } catch (error) {
     console.error("Error actualizando venta:", error);
@@ -298,12 +296,24 @@ const getUltimaEntregaDelDia = async () => {
 const getTotalesEntregasDelDiaPorCaja = async () => {
   try {
     const hoy = new Date();
-    const inicioDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const finDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
+    const inicioDelDia = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth(),
+      hoy.getDate()
+    );
+    const finDelDia = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth(),
+      hoy.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     // Agrupa y suma por cajaId
     const resultados = await prisma.entregas.groupBy({
-      by: ['cajaId'],
+      by: ["cajaId"],
       where: {
         fechaCreacion: {
           gte: inicioDelDia,
@@ -316,12 +326,15 @@ const getTotalesEntregasDelDiaPorCaja = async () => {
     });
 
     // Devuelve un array de objetos { cajaId, totalEntregado }
-    return resultados.map(r => ({
+    return resultados.map((r) => ({
       cajaId: r.cajaId,
       totalEntregado: r._sum.monto || 0,
     }));
   } catch (error) {
-    console.error("Error al obtener totales de entregas del día por caja:", error);
+    console.error(
+      "Error al obtener totales de entregas del día por caja:",
+      error
+    );
     throw error;
   }
 };

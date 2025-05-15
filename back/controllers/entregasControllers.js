@@ -184,8 +184,6 @@ const addEntrega = async (req, res) => {
   try {
     const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } =
       req.body;
-
-    // Validar los datos recibidos
     if ((!monto && !pagoOtroDia) || !cajaId || !negocioId) {
       return res.status(400).json({
         success: false,
@@ -198,6 +196,7 @@ const addEntrega = async (req, res) => {
       const ventaActualizada = await entregaModel.marcarVentaParaPagoOtroDia(
         ventaId
       );
+      let estadoSocket = "venta-aplazada";
       actualizarVenta(cajaId, ventaActualizada, estadoSocket);
       return res.status(200).json({
         success: true,
@@ -215,14 +214,20 @@ const addEntrega = async (req, res) => {
       ventaId,
     });
 
+    let venta = null;
     // Si tiene ID de venta, actualizar su estado
-    let ventaActualizada = null;
     if (ventaId) {
-      ventaActualizada = await entregaModel.actualizarVentaPorEntrega(
+      const resultado = await entregaModel.actualizarVentaPorEntrega(
         ventaId,
         monto
       );
-      actualizarVenta(cajaId, ventaActualizada);
+      venta = resultado.venta;
+      const estadoSocket = resultado.estadoSocket;
+
+      console.log("ventaActualizada", venta);
+      console.log("estadoSocket", estadoSocket);
+
+      actualizarVenta(cajaId, venta, estadoSocket);
     }
 
     // Devolver respuesta exitosa
@@ -231,7 +236,7 @@ const addEntrega = async (req, res) => {
       message: "Entrega creada correctamente",
       data: {
         entrega: nuevaEntrega,
-        venta: ventaActualizada,
+        venta,
       },
     });
   } catch (error) {
@@ -279,13 +284,14 @@ const dropEntrega = async (req, res) => {
   }
 };
 
-
 const getTotalesEntregasDelDiaPorCaja = async (req, res) => {
   try {
     const totales = await entregaModel.getTotalesEntregasDelDiaPorCaja();
     res.json(totales);
   } catch (error) {
-    res.status(500).json({ error: "Error al obtener los totales de entregas del día por caja" });
+    res.status(500).json({
+      error: "Error al obtener los totales de entregas del día por caja",
+    });
   }
 };
 
