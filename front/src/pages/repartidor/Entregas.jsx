@@ -259,8 +259,17 @@ const Entregas = () => {
 
   const handleOpenPaymentModal = (entrega) => {
     setSelectedEntrega(entrega);
-    setPaymentAmount(entrega.monto.toString());
+    
+    // CAMBIO 1: Para estado 5 (pago parcial), establecer el placeholder como el resto pendiente
+    if (entrega.estado === 5) {
+      setPaymentAmount(entrega.resto_pendiente.toString());
+    } else {
+      setPaymentAmount(entrega.monto.toString());
+    }
+    
+    // CAMBIO 2: Si la venta tiene estado 3 (PAGO OTRO DÍA), no permitir marcar "Pagar otro día" nuevamente
     setPayLater(false);
+    
     setPaymentError("");
     setPaymentMethod("EFECTIVO");
     setPaymentModalVisible(true);
@@ -362,6 +371,14 @@ const Entregas = () => {
       });
 
       setEntregas(updatedEntregas);
+      
+      // Eliminar el ID de la venta de newVentasIds cuando se procesa el pago
+      if (newVentasIds.includes(selectedEntrega.id)) {
+        setNewVentasIds((prevIds) => 
+          prevIds.filter((id) => id !== selectedEntrega.id)
+        );
+      }
+      
       setPaymentModalVisible(false);
       setDetailsModalVisible(false);
       setSelectedEntrega(null);
@@ -499,40 +516,46 @@ const Entregas = () => {
                 borderLeftColor: entrega.metodo_pago ? "#10b981" : "#f59e0b",
               }}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <FileTextOutlined className="text-blue-600" />
-                    <span className="font-semibold">
-                      {entrega.tipo} #{entrega.numero}
-                    </span>
-                    {newVentasIds.includes(entrega.id) && (
-                      <Badge count="Nuevo" color="#1890ff" />
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <ShopOutlined className="text-gray-600" />
-                    <span>{entrega.negocio?.nombre || "N/A"}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <CreditCardOutlined className="text-green-600" />
-                    <span className="font-medium">
-                      {formatMoney(entrega.monto)}
-                    </span>
-                    {entrega.estado === 5 && entrega.monto_pagado > 0 && (
-                      <span className="text-sm text-orange-500">
-                        (Pagado: {formatMoney(entrega.monto_pagado)})
+              {/* Mejora del layout para mayor responsividad */}
+              <div className="flex flex-col">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <FileTextOutlined className="text-blue-600" />
+                      <span className="font-semibold">
+                        {entrega.tipo} #{entrega.numero}
                       </span>
-                    )}
+                      {newVentasIds.includes(entrega.id) && (
+                        <Badge count="Nuevo" color="#1890ff" />
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <ShopOutlined className="text-gray-600" />
+                      <span>{entrega.negocio?.nombre || "N/A"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <CreditCardOutlined className="text-green-600" />
+                      <span className="font-medium">
+                        {formatMoney(entrega.monto)}
+                      </span>
+                      {entrega.estado === 5 && entrega.monto_pagado > 0 && (
+                        <span className="text-sm text-orange-500">
+                          (Pagado: {formatMoney(entrega.monto_pagado)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    {entrega.tipo === "Venta" && getEstadoTag(entrega.estado)}
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  {entrega.tipo === "Venta" && getEstadoTag(entrega.estado)}
-
-                  <div className="flex gap-2 mt-2">
+                {/* Botones en una nueva fila para mejor responsividad */}
+                <div className="flex justify-end mt-2">
+                  <div className="flex gap-2">
                     <Button
                       type="default"
                       size="small"
@@ -737,7 +760,11 @@ const Entregas = () => {
           )}
 
           <Form.Item label="Pagar otro día" className="mb-4">
-            <Checkbox checked={payLater} onChange={handlePayLaterChange}>
+            <Checkbox 
+              checked={payLater} 
+              onChange={handlePayLaterChange}
+              disabled={selectedEntrega?.estado === 3 || selectedEntrega?.estado === 5}
+            >
               Marcar para pago en otra fecha
             </Checkbox>
           </Form.Item>
@@ -781,7 +808,7 @@ const Entregas = () => {
                   prefix={<DollarOutlined />}
                   placeholder={
                     selectedEntrega?.estado === 5
-                      ? "Ingrese el monto a pagar"
+                      ? `Ingrese el monto a pagar (Pendiente: ${formatMoney(selectedEntrega?.resto_pendiente || 0)})`
                       : "Ingrese el monto recibido"
                   }
                   value={paymentAmount}
@@ -790,36 +817,9 @@ const Entregas = () => {
                   type="number"
                   min="0"
                   step="0.01"
-                  defaultValue={
-                    selectedEntrega?.estado === 5
-                      ? selectedEntrega?.resto_pendiente
-                      : selectedEntrega?.monto
-                  }
                 />
               </Form.Item>
             </>
-          )}
-
-          {paymentMethod === "EFECTIVO" && !payLater && (
-            <Form.Item label="Vuelto" className="mb-4">
-              <Input
-                prefix={<DollarOutlined />}
-                readOnly
-                value={
-                  paymentAmount && !isNaN(parseFloat(paymentAmount))
-                    ? formatMoney(
-                        Math.max(
-                          0,
-                          parseFloat(paymentAmount) -
-                            (selectedEntrega?.estado === 5
-                              ? selectedEntrega?.resto_pendiente
-                              : selectedEntrega?.monto || 0)
-                        )
-                      )
-                    : "$0"
-                }
-              />
-            </Form.Item>
           )}
         </Form>
       </Modal>
