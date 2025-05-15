@@ -14,6 +14,7 @@ import Repartidor from "../pages/repartidor/Repartidor";
 import Unauthorized from "../pages/Unauthorized";
 import Entregas from "../pages/repartidor/Entregas";
 import MainLayout from "../components/layout/Sidebar"; // Ajusta el path si es necesario
+import Caja from "../pages/admin/Caja";
 
 const AppRouter = () => {
   const token = sessionStorage.getItem("token");
@@ -64,6 +65,7 @@ const AppRouter = () => {
                     <Route path="negocios/:id" element={<Negocios />} />
                     <Route path="resumenes" element={<Resumenes />} />
                     <Route path="ventas" element={<Ventas />} />
+                    <Route path="caja" element={<Caja />} />
                   </>
                 ) : (
                   // Si no tiene permisos de admin ni manager

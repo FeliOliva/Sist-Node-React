@@ -279,6 +279,16 @@ const dropEntrega = async (req, res) => {
   }
 };
 
+
+const getTotalesEntregasDelDiaPorCaja = async (req, res) => {
+  try {
+    const totales = await entregaModel.getTotalesEntregasDelDiaPorCaja();
+    res.json(totales);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener los totales de entregas del día por caja" });
+  }
+};
+
 module.exports = {
   getEntregas,
   getEntregaById,
@@ -287,4 +297,5 @@ module.exports = {
   dropEntrega,
   updateEntrega,
   cambiarEstadoVenta,
+  getTotalesEntregasDelDiaPorCaja,
 };

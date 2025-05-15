@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Spin, Badge } from "antd";
+import { Badge } from "antd";
 import Entregas from "./Entregas"; // Ajusta la ruta según tu estructura
+import Loading from "../../components/Loading"; 
 
 const Repartidor = () => {
   const [loading, setLoading] = useState(true);
@@ -41,8 +42,8 @@ const Repartidor = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Spin size="large" tip="Cargando información..." />
+      <div className="flex justify-center items-center">
+        <Loading />
       </div>
     );
   }

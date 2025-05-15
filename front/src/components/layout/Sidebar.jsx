@@ -50,6 +50,8 @@ const MainLayout = () => {
         return "Productos";
       case "/resumenes":
         return "Resumenes";
+      case "/caja":
+        return "Cierre de Caja";
       default:
         return "";
     }
@@ -87,6 +89,14 @@ const MainLayout = () => {
                 onClick={() => isMobile && setMobileDrawerOpen(false)}
               >
                 Resúmenes
+              </Link>
+            </Menu.Item>
+            <Menu.Item key="/caja" icon={<UserOutlined />}>
+              <Link
+                to="/caja"
+                onClick={() => isMobile && setMobileDrawerOpen(false)}
+              >
+                Cierre de Caja
               </Link>
             </Menu.Item>
           </>
