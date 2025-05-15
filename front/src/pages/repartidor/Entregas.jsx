@@ -168,11 +168,11 @@ const Entregas = () => {
 
             // Añadir la nueva venta a la lista
             setEntregas((prevEntregas) => [nuevaVenta, ...prevEntregas]);
-            
+
             // Aplicar el filtro actual a las entregas actualizadas
             const updatedEntregas = [nuevaVenta, ...entregas];
             applyFilter(estadoFiltro, updatedEntregas);
-            
+
             // Marcar la venta como nueva
             setNewVentasIds((prevIds) => [...prevIds, nuevaVenta.id]);
 
@@ -195,17 +195,17 @@ const Entregas = () => {
                 (venta) => venta.id.toString() !== idEliminado.toString()
               )
             );
-            
+
             // Actualizar las entregas filtradas también
             setFilteredEntregas((prevFilteredEntregas) =>
               prevFilteredEntregas.filter(
                 (venta) => venta.id.toString() !== idEliminado.toString()
               )
             );
-            
+
             // Eliminar de la lista de nuevas ventas si estaba allí
-            setNewVentasIds((prevIds) => 
-              prevIds.filter(id => id.toString() !== idEliminado.toString())
+            setNewVentasIds((prevIds) =>
+              prevIds.filter((id) => id.toString() !== idEliminado.toString())
             );
 
             notification.warning({
@@ -306,9 +306,9 @@ const Entregas = () => {
         metodoPagos.find((metodo) => metodo.nombre === paymentMethod)?.id || 1;
 
       // Verificar si el pago es parcial
-      const isParcial = 
-        !payLater && 
-        parseFloat(paymentAmount) < selectedEntrega.monto && 
+      const isParcial =
+        !payLater &&
+        parseFloat(paymentAmount) < selectedEntrega.monto &&
         parseFloat(paymentAmount) > 0;
 
       // Crear el objeto de datos para la API
@@ -335,11 +335,11 @@ const Entregas = () => {
       const updatedEntregas = entregas.map((item) => {
         if (item.id === selectedEntrega.id) {
           // Calcular el monto pagado total y resto pendiente
-          const montoPagado = payLater 
-            ? 0 
+          const montoPagado = payLater
+            ? 0
             : parseFloat(paymentAmount) + (item.monto_pagado || 0);
           const restoPendiente = Math.max(0, item.monto - montoPagado);
-          
+
           // Determinar el nuevo estado
           let nuevoEstado;
           if (payLater) {
@@ -349,7 +349,7 @@ const Entregas = () => {
           } else {
             nuevoEstado = 2; // Cobrada completamente
           }
-          
+
           return {
             ...item,
             metodo_pago: payLater ? "PENDIENTE_OTRO_DIA" : paymentMethod,
@@ -369,7 +369,7 @@ const Entregas = () => {
       // Mensaje de éxito
       let notificationMessage = "";
       let notificationDescription = "";
-      
+
       if (payLater) {
         notificationMessage = "Pago aplazado";
         notificationDescription = "Entrega marcada para pago en otro día";
@@ -384,13 +384,12 @@ const Entregas = () => {
           parseFloat(paymentAmount)
         )}`;
       }
-      
+
       notification.success({
         message: notificationMessage,
         description: notificationDescription,
         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
       });
-      
     } catch (error) {
       console.error("Error al procesar el pago:", error);
       setPaymentError("Error al procesar el pago. Intente nuevamente.");
@@ -464,7 +463,7 @@ const Entregas = () => {
             Entregas Pendientes
           </h1>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4">
           <Select
             value={estadoFiltro}
@@ -479,7 +478,7 @@ const Entregas = () => {
             <Select.Option value="3">Aplazado</Select.Option>
             <Select.Option value="5">Pago parcial</Select.Option>
           </Select>
-          
+
           {wsConnected ? (
             <Tag color="success" icon={<CheckCircleOutlined />}>
               Conectado
@@ -542,7 +541,9 @@ const Entregas = () => {
                       Ver Detalles
                     </Button>
 
-                    {(entrega.estado === 1 || entrega.estado === 3 || entrega.estado === 5) && (
+                    {(entrega.estado === 1 ||
+                      entrega.estado === 3 ||
+                      entrega.estado === 5) && (
                       <Button
                         type="primary"
                         size="small"
@@ -572,18 +573,23 @@ const Entregas = () => {
           <Button key="back" onClick={handleCloseDetailsModal}>
             Cerrar
           </Button>,
-          selectedEntrega && (selectedEntrega.estado === 1 || selectedEntrega.estado === 3 || selectedEntrega.estado === 5) && (
-            <Button
-              key="cobrar"
-              type="primary"
-              onClick={() => {
-                handleCloseDetailsModal();
-                handleOpenPaymentModal(selectedEntrega);
-              }}
-            >
-              {selectedEntrega.estado === 5 ? "Completar Pago" : "Cobrar Entrega"}
-            </Button>
-          ),
+          selectedEntrega &&
+            (selectedEntrega.estado === 1 ||
+              selectedEntrega.estado === 3 ||
+              selectedEntrega.estado === 5) && (
+              <Button
+                key="cobrar"
+                type="primary"
+                onClick={() => {
+                  handleCloseDetailsModal();
+                  handleOpenPaymentModal(selectedEntrega);
+                }}
+              >
+                {selectedEntrega.estado === 5
+                  ? "Completar Pago"
+                  : "Cobrar Entrega"}
+              </Button>
+            ),
         ]}
         width={600}
       >
@@ -623,11 +629,12 @@ const Entregas = () => {
                 <p className="text-xl font-bold text-green-600">
                   {formatMoney(selectedEntrega.monto)}
                 </p>
-                {selectedEntrega.monto_pagado > 0 && selectedEntrega.resto_pendiente > 0 && (
-                  <p className="text-sm text-green-500">
-                    Pagado: {formatMoney(selectedEntrega.monto_pagado)}
-                  </p>
-                )}
+                {selectedEntrega.monto_pagado > 0 &&
+                  selectedEntrega.resto_pendiente > 0 && (
+                    <p className="text-sm text-green-500">
+                      Pagado: {formatMoney(selectedEntrega.monto_pagado)}
+                    </p>
+                  )}
                 {selectedEntrega.resto_pendiente > 0 && (
                   <p className="text-sm text-orange-500">
                     Pendiente: {formatMoney(selectedEntrega.resto_pendiente)}
@@ -671,7 +678,9 @@ const Entregas = () => {
 
       {/* Modal para procesar el pago */}
       <Modal
-        title={selectedEntrega?.estado === 5 ? "Completar Pago" : "Cobrar Entrega"}
+        title={
+          selectedEntrega?.estado === 5 ? "Completar Pago" : "Cobrar Entrega"
+        }
         open={paymentModalVisible}
         onCancel={handleClosePaymentModal}
         footer={[
@@ -752,28 +761,40 @@ const Entregas = () => {
               </Form.Item>
 
               <Form.Item
-                label={selectedEntrega?.estado === 5 ? "Monto a pagar ahora" : "Monto recibido"}
+                label={
+                  selectedEntrega?.estado === 5
+                    ? "Monto a pagar ahora"
+                    : "Monto recibido"
+                }
                 className="mb-4"
                 tooltip={
                   payLater
                     ? "Desactive 'Pagar otro día' para ingresar un monto"
                     : selectedEntrega?.estado === 5
-                    ? `Monto pendiente: ${formatMoney(selectedEntrega?.resto_pendiente || 0)}`
+                    ? `Monto pendiente: ${formatMoney(
+                        selectedEntrega?.resto_pendiente || 0
+                      )}`
                     : ""
                 }
               >
                 <Input
                   prefix={<DollarOutlined />}
-                  placeholder={selectedEntrega?.estado === 5 
-                    ? "Ingrese el monto a pagar" 
-                    : "Ingrese el monto recibido"}
+                  placeholder={
+                    selectedEntrega?.estado === 5
+                      ? "Ingrese el monto a pagar"
+                      : "Ingrese el monto recibido"
+                  }
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   disabled={payLater}
                   type="number"
                   min="0"
                   step="0.01"
-                  defaultValue={selectedEntrega?.estado === 5 ? selectedEntrega?.resto_pendiente : selectedEntrega?.monto}
+                  defaultValue={
+                    selectedEntrega?.estado === 5
+                      ? selectedEntrega?.resto_pendiente
+                      : selectedEntrega?.monto
+                  }
                 />
               </Form.Item>
             </>
@@ -790,8 +811,8 @@ const Entregas = () => {
                         Math.max(
                           0,
                           parseFloat(paymentAmount) -
-                            (selectedEntrega?.estado === 5 
-                              ? selectedEntrega?.resto_pendiente 
+                            (selectedEntrega?.estado === 5
+                              ? selectedEntrega?.resto_pendiente
                               : selectedEntrega?.monto || 0)
                         )
                       )
