@@ -179,6 +179,21 @@ const actualizarVentaPorEntrega = async (ventaId, monto) => {
   try {
     const venta = await prisma.venta.findUnique({
       where: { id: ventaId },
+      include: {
+        negocio: {
+          select: { nombre: true },
+        },
+        caja: {
+          select: { nombre: true },
+        },
+        detalles: {
+          include: {
+            producto: {
+              select: { nombre: true }, // importante incluir nombre
+            },
+          },
+        },
+      },
     });
 
     if (!venta) {
@@ -199,15 +214,27 @@ const actualizarVentaPorEntrega = async (ventaId, monto) => {
       estadoSocket = "venta-pagada-parcialmente";
     }
 
-    const ventaActualizada = await prisma.venta.update({
+    // Actualizar solo los campos necesarios
+    await prisma.venta.update({
       where: { id: ventaId },
       data: {
         totalPagado: nuevoTotalPagado,
         restoPendiente: nuevoRestoPendiente > 0 ? nuevoRestoPendiente : 0,
         estadoPago: nuevoEstadoPago,
       },
+    });
+
+    // Volver a consultar con los includes deseados
+    const ventaActualizada = await prisma.venta.findUnique({
+      where: { id: ventaId },
       include: {
-        detalles: true,
+        negocio: { select: { nombre: true } },
+        caja: { select: { nombre: true } },
+        detalles: {
+          include: {
+            producto: { select: { nombre: true } },
+          },
+        },
       },
     });
 

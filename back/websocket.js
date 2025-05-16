@@ -16,24 +16,60 @@ function setupWebSocket(server, prisma) {
     const mañana = new Date(hoy);
     mañana.setDate(hoy.getDate() + 1);
 
-    // Filtrar ventas por cajaId específico usando fechaCreacion en lugar de fecha
-    const ventas = await prisma.venta.findMany({
+    // 1. Ventas del día actual (todas sin importar estadoPago)
+    const ventasDelDia = await prisma.venta.findMany({
       where: {
         fechaCreacion: {
           gte: hoy,
           lt: mañana,
         },
-        cajaId: parseInt(cajaId), // Asegurarse de que cajaId sea un número
+        cajaId: parseInt(cajaId),
       },
       include: {
-        detalles: true,
-        negocio: true,
+        detalles: {
+          include: {
+            producto: { select: { nombre: true } },
+          },
+        },
+        negocio: { select: { nombre: true } },
       },
     });
 
-    // Almacenar las ventas para esta caja
-    ventasPorCaja[cajaId] = ventas;
-    return ventas;
+    // 2. Ventas de otros días pero con estadoPago 1, 2 o 5
+    const otrasVentas = await prisma.venta.findMany({
+      where: {
+        fechaCreacion: {
+          lt: hoy,
+        },
+        cajaId: parseInt(cajaId),
+        estadoPago: {
+          in: [1, 2, 5],
+        },
+      },
+      include: {
+        detalles: {
+          include: {
+            producto: { select: { nombre: true } },
+          },
+        },
+        negocio: { select: { nombre: true } },
+      },
+    });
+
+    // Combinar resultados
+    const ventas = [...ventasDelDia, ...otrasVentas];
+
+    // Añadir nombreProducto directamente para facilitar en el frontend
+    const ventasMejoradas = ventas.map((venta) => ({
+      ...venta,
+      detalles: venta.detalles.map((detalle) => ({
+        ...detalle,
+        nombreProducto: detalle.producto?.nombre || "Producto sin nombre",
+      })),
+    }));
+
+    ventasPorCaja[cajaId] = ventasMejoradas;
+    return ventasMejoradas;
   };
 
   wss.on("connection", async (ws, req) => {

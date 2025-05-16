@@ -187,7 +187,7 @@ const addVenta = async (req, res) => {
     });
 
     const ventaConNegocio = await ventaModel.getVentaById(venta.id);
-
+    console.log("ventaConNegocio", ventaConNegocio);
     broadcastNuevaVenta(ventaConNegocio);
 
     res.status(200).json(venta);
