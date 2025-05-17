@@ -7,11 +7,13 @@ const CierreCajaGeneral = () => {
   const [montosContados, setMontosContados] = useState({});
   const [loading, setLoading] = useState(false);
   const [totalesEntregas, setTotalesEntregas] = useState([]);
+  const [cierres, setCierres] = useState([]);
 
-  useEffect(() => {
-    api("api/caja", "GET").then((data) => setCajas(data));
-    api("api/entregas/totales-dia-caja", "GET").then((data) => setTotalesEntregas(data));
-  }, []);
+useEffect(() => {
+  api("api/caja", "GET").then((data) => setCajas(data));
+  api("api/entregas/totales-dia-caja", "GET").then((data) => setTotalesEntregas(data));
+  api("api/cierres-caja", "GET").then((data) => setCierres(data));
+}, []);
 
   const handleInputChange = (cajaId, value) => {
     setMontosContados((prev) => ({ ...prev, [cajaId]: value }));
@@ -22,24 +24,33 @@ const CierreCajaGeneral = () => {
     return encontrado ? encontrado.totalEntregado : 0;
   };
 
-  const handleCerrarCaja = async (caja) => {
-    setLoading(true);
-    const contado = montosContados[caja.id] || 0;
-    const totalSistema = getTotalSistema(caja.id);
-    const diferencia = contado - totalSistema;
+const handleCerrarCaja = async (caja) => {
+  setLoading(true);
+  const contado = montosContados[caja.id] || 0;
+  const totalSistema = getTotalSistema(caja.id);
+  const diferencia = contado - totalSistema;
 
-    await api("api/cierre-caja", "POST", JSON.stringify({
-      cajaId: caja.id,
-      contado,
-      diferencia,
-    }));
+  // Simula usuarioId, reemplaza por el real si lo tienes en sesión
+  const usuarioId = 1;
 
-    notification.success({
-      message: "Cierre realizado",
-      description: `Cierre de caja ${caja.nombre} guardado. Diferencia: $${diferencia}`,
-    });
-    setLoading(false);
-  };
+  await api("api/cierre-caja", "POST", JSON.stringify({
+    usuarioId,
+    totalVentas: totalSistema,
+    totalPagado: contado,
+    ingresoLimpio: diferencia,
+  }));
+
+  notification.success({
+    message: "Cierre realizado",
+    description: `Cierre de caja ${caja.nombre} guardado. Diferencia: $${diferencia}`,
+  });
+
+  // Refresca la tabla de cierres
+  const nuevosCierres = await api("api/cierres-caja", "GET");
+  setCierres(nuevosCierres);
+
+  setLoading(false);
+};
 
   return (
     <Card title="Cierre de Caja General" className="mb-6">
@@ -86,7 +97,22 @@ const CierreCajaGeneral = () => {
           },
         ]}
       />
+      <Card title="Historial de Cierres de Caja" className="mb-6 mt-6">
+  <Table
+    dataSource={cierres}
+    rowKey="id"
+    pagination={false}
+    columns={[
+      { title: "Fecha", dataIndex: "fecha", render: v => new Date(v).toLocaleString() },
+      { title: "Usuario", dataIndex: ["usuario", "usuario"] },
+      { title: "Total Sistema", dataIndex: "totalVentas", render: v => `$${v}` },
+      { title: "Contado", dataIndex: "totalPagado", render: v => `$${v}` },
+      { title: "Diferencia", dataIndex: "ingresoLimpio", render: v => `$${v}` },
+    ]}
+  />
+</Card>
     </Card>
+    
   );
 };
 
