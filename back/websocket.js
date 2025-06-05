@@ -43,7 +43,7 @@ function setupWebSocket(server, prisma) {
         },
         cajaId: parseInt(cajaId),
         estadoPago: {
-          in: [1, 2, 5],
+          in: [1, 3, 5],
         },
       },
       include: {
