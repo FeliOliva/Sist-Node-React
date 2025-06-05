@@ -62,7 +62,7 @@ const AppRouter = () => {
                 {isAdmin || isManager ? (
                   <>
                     <Route path="productos" element={<Productos />} />
-                    <Route path="negocios/:id" element={<Negocios />} />
+                    <Route path="negocios" element={<Negocios />} />
                     <Route path="resumenes" element={<Resumenes />} />
                     <Route path="ventas" element={<Ventas />} />
                     <Route path="caja" element={<Caja />} />
@@ -71,7 +71,7 @@ const AppRouter = () => {
                   // Si no tiene permisos de admin ni manager
                   <>
                     <Route path="productos" element={<Unauthorized />} />
-                    <Route path="negocios/:id" element={<Unauthorized />} />
+                    <Route path="negocios" element={<Unauthorized />} />
                     <Route path="resumenes" element={<Unauthorized />} />
                     <Route path="ventas" element={<Unauthorized />} />
                   </>

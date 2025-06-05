@@ -26,10 +26,10 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
   CalendarOutlined,
-  BellOutlined,
   ReloadOutlined,
-  BankOutlined,
   FilterOutlined,
+  SolutionOutlined,
+  ExclamationCircleOutlined
 } from "@ant-design/icons";
 import { api } from "../../services/api";
 import Loading from "../../components/Loading";
@@ -51,6 +51,7 @@ const Entregas = () => {
   const [form] = Form.useForm();
   const [wsConnected, setWsConnected] = useState(false);
   const [socket, setSocket] = useState(null);
+  const [orden, setOrden] = useState("desc");
   const [metodoPagos, setMetodoPagos] = useState([
     { id: 1, nombre: "EFECTIVO" },
     { id: 2, nombre: "TRANSFERENCIA/QR" },
@@ -58,6 +59,9 @@ const Entregas = () => {
     { id: 4, nombre: "TARJETA CREDITO" },
   ]);
   const initialized = useRef(false);
+
+  const [confirmEntregaVisible, setConfirmEntregaVisible] = useState(false);
+  const [entregaAEntregar, setEntregaAEntregar] = useState(null);
 
   // Configurar WebSocket
   useEffect(() => {
@@ -111,6 +115,7 @@ const Entregas = () => {
               resto_pendiente: venta.restoPendiente,
               metodo_pago: venta.estadoPago === 1 ? null : "EFECTIVO", // 1 = pendiente
               estado: venta.estadoPago,
+              fechaCreacion: venta.fechaCreacion,
               negocio: {
                 id: venta.negocio?.id || venta.negocioId,
                 nombre: venta.negocio?.nombre || `Negocio #${venta.negocioId}`,
@@ -122,7 +127,7 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `Producto #${detalle.productoId}`,
+                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre}`,
                 },
               })),
             }));
@@ -148,6 +153,7 @@ const Entregas = () => {
               resto_pendiente: mensaje.data.restoPendiente,
               metodo_pago: mensaje.data.estadoPago === 1 ? null : "EFECTIVO",
               estado: mensaje.data.estadoPago,
+              fechaCreacion: mensaje.data.fechaCreacion,
               negocio: {
                 id: mensaje.data.negocio?.id || mensaje.data.negocioId,
                 nombre:
@@ -161,7 +167,7 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `Producto #${detalle.productoId}`,
+                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre}`,
                 },
               })),
             };
@@ -179,9 +185,8 @@ const Entregas = () => {
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${
-                nuevaVenta.numero
-              } por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${nuevaVenta.numero
+                } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -247,6 +252,35 @@ const Entregas = () => {
     applyFilter(estadoFiltro);
   }, [estadoFiltro, entregas]);
 
+
+  const handleEntregarCuentaCorriente = (entrega) => {
+    setEntregaAEntregar(entrega);
+    setConfirmEntregaVisible(true);
+  };
+
+
+  const handleConfirmEntregar = () => {
+    if (!entregaAEntregar) return;
+    // Cambia el estado de la entrega a "Entregada" (por ejemplo, estado 6)
+    const updatedEntregas = entregas.map((item) =>
+      item.id === entregaAEntregar.id
+        ? { ...item, estado: 6 }
+        : item
+    );
+    setEntregas(updatedEntregas);
+    setConfirmEntregaVisible(false);
+    setEntregaAEntregar(null);
+    notification.success({
+      message: "Pedido entregado",
+      description: "El pedido fue marcado como entregado.",
+    });
+  };
+
+  const handleCancelEntregar = () => {
+    setConfirmEntregaVisible(false);
+    setEntregaAEntregar(null);
+  };
+
   const handleViewDetails = (entrega) => {
     setSelectedEntrega(entrega);
     setDetailsModalVisible(true);
@@ -259,17 +293,17 @@ const Entregas = () => {
 
   const handleOpenPaymentModal = (entrega) => {
     setSelectedEntrega(entrega);
-    
+
     // CAMBIO 1: Para estado 5 (pago parcial), establecer el placeholder como el resto pendiente
     if (entrega.estado === 5) {
       setPaymentAmount(entrega.resto_pendiente.toString());
     } else {
       setPaymentAmount(entrega.monto.toString());
     }
-    
+
     // CAMBIO 2: Si la venta tiene estado 3 (PAGO OTRO DÍA), no permitir marcar "Pagar otro día" nuevamente
     setPayLater(false);
-    
+
     setPaymentError("");
     setPaymentMethod("EFECTIVO");
     setPaymentModalVisible(true);
@@ -371,14 +405,14 @@ const Entregas = () => {
       });
 
       setEntregas(updatedEntregas);
-      
+
       // Eliminar el ID de la venta de newVentasIds cuando se procesa el pago
       if (newVentasIds.includes(selectedEntrega.id)) {
-        setNewVentasIds((prevIds) => 
+        setNewVentasIds((prevIds) =>
           prevIds.filter((id) => id !== selectedEntrega.id)
         );
       }
-      
+
       setPaymentModalVisible(false);
       setDetailsModalVisible(false);
       setSelectedEntrega(null);
@@ -439,10 +473,22 @@ const Entregas = () => {
             PAGO OTRO DÍA
           </Tag>
         );
+      case 4:
+        return (
+          <Tag icon={<SolutionOutlined />} color="success">
+            CUENTA CORRIENTE
+          </Tag>
+        );
       case 5:
         return (
           <Tag icon={<DollarOutlined />} color="orange">
             PAGO PARCIAL
+          </Tag>
+        );
+      case 6:
+        return (
+          <Tag icon={<CheckCircleOutlined />} color="blue">
+            ENTREGADA
           </Tag>
         );
       default:
@@ -482,20 +528,30 @@ const Entregas = () => {
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <Select
-            value={estadoFiltro}
-            onChange={setEstadoFiltro}
-            style={{ width: 140 }}
-            placeholder="Filtrar por estado"
-            suffixIcon={<FilterOutlined />}
-          >
-            <Select.Option value="todos">Todos</Select.Option>
-            <Select.Option value="1">Pendiente</Select.Option>
-            <Select.Option value="2">Cobrado</Select.Option>
-            <Select.Option value="3">Aplazado</Select.Option>
-            <Select.Option value="5">Pago parcial</Select.Option>
-          </Select>
-
+          <div className="flex gap-2">
+            <Select
+              value={estadoFiltro}
+              onChange={setEstadoFiltro}
+              style={{ width: 110 }}
+              placeholder="Filtrar por estado"
+              suffixIcon={<FilterOutlined />}
+            >
+              <Select.Option value="todos">Todos</Select.Option>
+              <Select.Option value="1">Pendiente</Select.Option>
+              <Select.Option value="2">Cobrado</Select.Option>
+              <Select.Option value="3">Aplazado</Select.Option>
+              <Select.Option value="5">Pago parcial</Select.Option>
+            </Select>
+            <Select
+              value={orden}
+              onChange={setOrden}
+              style={{ width: 175, marginRight: 8 }}
+              placeholder="Ordenar"
+            >
+              <Select.Option value="desc">Más reciente primero</Select.Option>
+              <Select.Option value="asc">Más antigua primero</Select.Option>
+            </Select>
+          </div>
           {wsConnected ? (
             <Tag color="success" icon={<CheckCircleOutlined />}>
               Conectado
@@ -506,83 +562,105 @@ const Entregas = () => {
             </Tag>
           )}
         </div>
-
         <div className="space-y-4">
-          {filteredEntregas.map((entrega) => (
-            <Card
-              key={entrega.id}
-              className="shadow-md rounded-lg border-l-4 hover:shadow-lg transition-shadow"
-              style={{
-                borderLeftColor: entrega.metodo_pago ? "#10b981" : "#f59e0b",
-              }}
-            >
-              {/* Mejora del layout para mayor responsividad */}
-              <div className="flex flex-col">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <FileTextOutlined className="text-blue-600" />
-                      <span className="font-semibold">
-                        {entrega.tipo} #{entrega.numero}
-                      </span>
-                      {newVentasIds.includes(entrega.id) && (
-                        <Badge count="Nuevo" color="#1890ff" />
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <ShopOutlined className="text-gray-600" />
-                      <span>{entrega.negocio?.nombre || "N/A"}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <CreditCardOutlined className="text-green-600" />
-                      <span className="font-medium">
-                        {formatMoney(entrega.monto)}
-                      </span>
-                      {entrega.estado === 5 && entrega.monto_pagado > 0 && (
-                        <span className="text-sm text-orange-500">
-                          (Pagado: {formatMoney(entrega.monto_pagado)})
+          {[...filteredEntregas]
+            .sort((a, b) => {
+              const fechaA = new Date(a.fechaCreacion);
+              const fechaB = new Date(b.fechaCreacion);
+              return orden === "desc" ? fechaB - fechaA : fechaA - fechaB;
+            })
+            .map((entrega) => (
+              <Card
+                key={entrega.id}
+                className="shadow-md rounded-lg border-l-4 hover:shadow-lg transition-shadow"
+                style={{
+                  borderLeftColor: entrega.metodo_pago ? "#10b981" : "#f59e0b",
+                }}
+              >
+                {/* Mejora del layout para mayor responsividad */}
+                <div className="flex flex-col">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <FileTextOutlined className="text-blue-600" />
+                        <span className="font-semibold">
+                          {entrega.tipo} #{entrega.numero}
                         </span>
-                      )}
+                        {newVentasIds.includes(entrega.id) && (
+                          <Badge count="Nuevo" color="#1890ff" />
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <ShopOutlined className="text-gray-600" />
+                        <span>{entrega.negocio?.nombre || "N/A"}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <CalendarOutlined />
+                        <span>
+                          {entrega.fechaCreacion
+                            ? new Date(entrega.fechaCreacion).toLocaleString("es-AR")
+                            : ""}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <CreditCardOutlined className="text-green-600" />
+                        <span className="font-medium">
+                          {formatMoney(entrega.monto)}
+                        </span>
+                        {entrega.estado === 5 && entrega.monto_pagado > 0 && (
+                          <span className="text-sm text-orange-500">
+                            (Pagado: {formatMoney(entrega.monto_pagado)})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      {entrega.tipo === "Venta" && getEstadoTag(entrega.estado)}
                     </div>
                   </div>
 
-                  <div>
-                    {entrega.tipo === "Venta" && getEstadoTag(entrega.estado)}
-                  </div>
-                </div>
-
-                {/* Botones en una nueva fila para mejor responsividad */}
-                <div className="flex justify-end mt-2">
-                  <div className="flex gap-2">
-                    <Button
-                      type="default"
-                      size="small"
-                      onClick={() => handleViewDetails(entrega)}
-                    >
-                      Ver Detalles
-                    </Button>
-
-                    {(entrega.estado === 1 ||
-                      entrega.estado === 3 ||
-                      entrega.estado === 5) && (
+                  {/* Botones en una nueva fila para mejor responsividad */}
+                  <div className="flex justify-end mt-2">
+                    <div className="flex gap-2">
                       <Button
-                        type="primary"
+                        type="default"
                         size="small"
-                        onClick={() => handleOpenPaymentModal(entrega)}
+                        onClick={() => handleViewDetails(entrega)}
                       >
-                        {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
+                        Ver Detalles
                       </Button>
-                    )}
+
+                      {(entrega.estado === 1 ||
+                        entrega.estado === 3 ||
+                        entrega.estado === 5) && (
+                          <Button
+                            type="primary"
+                            size="small"
+                            onClick={() => handleOpenPaymentModal(entrega)}
+                          >
+                            {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
+                          </Button>
+                        )}
+                      {entrega.estado === 4 && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={() => handleEntregarCuentaCorriente(entrega)}
+                        >
+                          Entregar
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
         </div>
       </div>
-
       {/* Modal para mostrar los detalles */}
       <Modal
         title={
@@ -597,22 +675,22 @@ const Entregas = () => {
             Cerrar
           </Button>,
           selectedEntrega &&
-            (selectedEntrega.estado === 1 ||
-              selectedEntrega.estado === 3 ||
-              selectedEntrega.estado === 5) && (
-              <Button
-                key="cobrar"
-                type="primary"
-                onClick={() => {
-                  handleCloseDetailsModal();
-                  handleOpenPaymentModal(selectedEntrega);
-                }}
-              >
-                {selectedEntrega.estado === 5
-                  ? "Completar Pago"
-                  : "Cobrar Entrega"}
-              </Button>
-            ),
+          (selectedEntrega.estado === 1 ||
+            selectedEntrega.estado === 3 ||
+            selectedEntrega.estado === 5) && (
+            <Button
+              key="cobrar"
+              type="primary"
+              onClick={() => {
+                handleCloseDetailsModal();
+                handleOpenPaymentModal(selectedEntrega);
+              }}
+            >
+              {selectedEntrega.estado === 5
+                ? "Completar Pago"
+                : "Cobrar Entrega"}
+            </Button>
+          ),
         ]}
         width={600}
       >
@@ -630,6 +708,14 @@ const Entregas = () => {
                 <p>
                   <strong>Número:</strong> {selectedEntrega.numero}
                 </p>
+                <p>
+                  <strong>Fecha:</strong>{" "}
+                  {selectedEntrega.fechaCreacion
+                    ? new Date(selectedEntrega.fechaCreacion).toLocaleString(
+                      "es-AR"
+                    )
+                    : ""}
+                </p>
               </div>
               <div>
                 <p>
@@ -637,10 +723,10 @@ const Entregas = () => {
                   {selectedEntrega.estado === 5
                     ? "PAGO PARCIAL"
                     : selectedEntrega.estado === 3
-                    ? "PAGO OTRO DÍA"
-                    : selectedEntrega.estado === 2
-                    ? "COBRADA"
-                    : "PENDIENTE"}
+                      ? "PAGO OTRO DÍA"
+                      : selectedEntrega.estado === 2
+                        ? "COBRADA"
+                        : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.estado !== 3 && (
@@ -675,7 +761,7 @@ const Entregas = () => {
                   <div className="flex w-full justify-between">
                     <div className="flex-1">
                       <div className="font-medium">
-                        {item.producto?.nombre || "Producto"}
+                        {item.nombreProducto || item.producto?.nombre || "Producto sin nombre"}
                       </div>
                       <div className="text-gray-600">
                         {item.cantidad} x {formatMoney(item.precio)}
@@ -697,6 +783,23 @@ const Entregas = () => {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Modal de confirmación para entregar cuenta corriente */}
+      <Modal
+        open={confirmEntregaVisible}
+        onCancel={handleCancelEntregar}
+        onOk={handleConfirmEntregar}
+        okText="Sí, entregar"
+        cancelText="Cancelar"
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: "#faad14", marginRight: 8 }} />
+            ¿Desea entregar el pedido?
+          </span>
+        }
+      >
+        <p>¿Desea entregar el pedido?</p>
       </Modal>
 
       {/* Modal para procesar el pago */}
@@ -760,8 +863,8 @@ const Entregas = () => {
           )}
 
           <Form.Item label="Pagar otro día" className="mb-4">
-            <Checkbox 
-              checked={payLater} 
+            <Checkbox
+              checked={payLater}
               onChange={handlePayLaterChange}
               disabled={selectedEntrega?.estado === 3 || selectedEntrega?.estado === 5}
             >
@@ -798,10 +901,10 @@ const Entregas = () => {
                   payLater
                     ? "Desactive 'Pagar otro día' para ingresar un monto"
                     : selectedEntrega?.estado === 5
-                    ? `Monto pendiente: ${formatMoney(
+                      ? `Monto pendiente: ${formatMoney(
                         selectedEntrega?.resto_pendiente || 0
                       )}`
-                    : ""
+                      : ""
                 }
               >
                 <Input

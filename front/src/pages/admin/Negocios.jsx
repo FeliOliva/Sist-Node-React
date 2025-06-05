@@ -15,13 +15,8 @@ const Negocios = () => {
 
   const fetchNegocios = async () => {
     try {
-      const data = await api(`api/getAllNegociosByCliente/${id}`);
+      const data = await api(`api/getAllNegocios`);
       setNegocios(data.negocios);
-      if (data.negocios.length > 0) {
-        const cliente = await api(`api/clientes/${id}`);
-        console.log("cliente", cliente);
-        setClienteNombre(cliente.nombre + " " + cliente.apellido);
-      }
     } catch (error) {
       message.error(error.message);
     } finally {

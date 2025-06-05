@@ -8,6 +8,7 @@ import {
   CloseOutlined,
   FileTextOutlined,
   ShoppingOutlined,
+  ShopOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, Button, theme, Drawer } from "antd";
 import { Link, Outlet, useLocation } from "react-router-dom";
@@ -48,6 +49,8 @@ const MainLayout = () => {
         return "Ventas";
       case "/productos":
         return "Productos";
+      case "/negocios":
+        return "Negocios";
       case "/resumenes":
         return "Resumenes";
       case "/caja":
@@ -81,6 +84,14 @@ const MainLayout = () => {
                 onClick={() => isMobile && setMobileDrawerOpen(false)}
               >
                 Productos
+              </Link>
+            </Menu.Item>
+            <Menu.Item key="/negocios" icon={<ShopOutlined />}>
+              <Link
+                to="/negocios"
+                onClick={() => isMobile && setMobileDrawerOpen(false)}
+              >
+                Negocios
               </Link>
             </Menu.Item>
             <Menu.Item key="/resumenes" icon={<FileTextOutlined />}>
