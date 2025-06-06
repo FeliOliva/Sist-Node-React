@@ -10,4 +10,6 @@ router.post("/negocio", verifyToken, negocioController.addNegocio);
 router.put("/negocio/:id", verifyToken, negocioController.updateNegocio);
 router.delete("/negocio/:id", verifyToken, negocioController.deleteNegocio);
 router.post("/negocio/:id", verifyToken, negocioController.upNegocio);
+router.put("/negocio/:id/deshabilitar", negocioController.deshabilitarNegocio);
+router.put("/negocio/:id/habilitar", negocioController.habilitarNegocio);
 module.exports = router;

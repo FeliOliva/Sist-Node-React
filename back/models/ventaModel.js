@@ -8,6 +8,9 @@ const getVentas = async (limitNumber, pageNumber) => {
     const ventas = await prisma.venta.findMany({
       skip: offset,
       take: limitNumber,
+      orderBy: {
+        fechaCreacion: 'desc', // <-- Agrega esta línea
+      },
       include: {
         negocio: {
           select: { nombre: true },
@@ -36,6 +39,7 @@ const getVentas = async (limitNumber, pageNumber) => {
     throw new Error("Error al obtener las ventas");
   }
 };
+
 const getNegocioById = async (negocioId) => {
   try {
     return await prisma.negocio.findUnique({

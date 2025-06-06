@@ -164,6 +164,27 @@ const upNegocio = async (req, res) => {
     res.status(500).json({ error: "Error al activar el negocio" });
   }
 };
+
+const deshabilitarNegocio = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await negocioModel.updateNegocioStatus(id, 0);
+    res.json({ message: "Negocio deshabilitado" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al deshabilitar el negocio" });
+  }
+};
+
+const habilitarNegocio = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await negocioModel.updateNegocioStatus(id, 1);
+    res.json({ message: "Negocio habilitado" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al habilitar el negocio" });
+  }
+};
+
 module.exports = {
   getNegocios,
   addNegocio,
@@ -172,4 +193,6 @@ module.exports = {
   upNegocio,
   getNegocioById,
   getAllNegocios,
+  deshabilitarNegocio,
+  habilitarNegocio,
 };
