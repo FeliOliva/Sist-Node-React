@@ -9,6 +9,7 @@ import {
   Input,
   InputNumber,
   Select,
+  Checkbox,
 } from "antd";
 import { api } from "../../services/api";
 
@@ -23,6 +24,9 @@ const Productos = () => {
   const [total, setTotal] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [registrarNuevaMedida, setRegistrarNuevaMedida] = useState(false);
+  const [nombreNuevaMedida, setNombreNuevaMedida] = useState("");
+  const [tiposUnidades, setTiposUnidades] = useState([]);
 
   const fetchProductos = async (page = 1) => {
     setLoading(true);
@@ -38,6 +42,23 @@ const Productos = () => {
     }
   };
 
+  const fetchTiposUnidades = async () => {
+  try {
+    const data = await api("api/tiposUnidades");
+    setTiposUnidades(data);
+  } catch (error) {
+    message.error("Error al cargar unidades");
+  }
+};
+
+useEffect(() => {
+  if (modalVisible) {
+    fetchTiposUnidades();
+    setRegistrarNuevaMedida(false);
+    setNombreNuevaMedida("");
+  }
+}, [modalVisible]);
+
   useEffect(() => {
     fetchProductos(currentPage);
   }, [currentPage]);
@@ -48,8 +69,7 @@ const Productos = () => {
       const metodo = estado === 1 ? "DELETE" : "POST";
       await api(`api/products/${id}`, metodo);
       message.success(
-        `Producto ${
-          nuevoEstado === 1 ? "activado" : "desactivado"
+        `Producto ${nuevoEstado === 1 ? "activado" : "desactivado"
         } correctamente.`
       );
       setProductos((prev) =>
@@ -62,31 +82,52 @@ const Productos = () => {
     }
   };
 
-  const onFinish = async (values) => {
-    const token = sessionStorage.getItem("token");
-    let rol_usuario = 0;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      rol_usuario = payload.rol || 0;
-    } catch (e) {
-      message.warning("No se pudo leer el rol del token.");
-    }
+const onFinish = async (values) => {
+  const token = sessionStorage.getItem("token");
+  let rol_usuario = 0;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    rol_usuario = payload.rol || 0;
+  } catch (e) {
+    message.warning("No se pudo leer el rol del token.");
+  }
 
-    const body = {
-      ...values,
-      precioInicial: values.precio,
-      rol_usuario,
-    };
-    try {
-      await api("api/products", "POST", body);
-      message.success("Producto agregado correctamente");
-      form.resetFields();
-      setModalVisible(false);
-      fetchProductos(currentPage);
-    } catch (error) {
-      message.error(error.message || "Error al agregar producto.");
+  let tipoUnidadId = values.tipoUnidadId;
+
+  // Si se registra una nueva medida, primero la creamos y usamos su id
+  if (registrarNuevaMedida) {
+    if (!nombreNuevaMedida) {
+      message.error("Debe ingresar el nombre de la nueva medida.");
+      return;
     }
+    try {
+      const nuevaUnidad = await api("api/tiposUnidades", "POST", { tipo: nombreNuevaMedida });
+      tipoUnidadId = nuevaUnidad.id;
+      // Actualiza la lista de unidades para futuras altas
+      fetchTiposUnidades();
+    } catch (error) {
+      message.error("Error al registrar la nueva medida.");
+      return;
+    }
+  }
+
+  const body = {
+    ...values,
+    tipoUnidadId,
+    precioInicial: values.precio,
+    rol_usuario,
   };
+
+  try {
+    await api("api/products", "POST", body);
+    message.success("Producto agregado correctamente");
+    form.resetFields();
+    setModalVisible(false);
+    fetchProductos(currentPage);
+  } catch (error) {
+    message.error(error.message || "Error al agregar producto.");
+  }
+};
 
   const columns = [
     {
@@ -142,7 +183,7 @@ const Productos = () => {
           placeholder="Buscar por nombre"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          style={{ width: 300, marginTop: 10 }}
+          style={{ width: 300, marginTop: 10, marginRight: 10 }}
         />
 
         <Button type="primary" onClick={() => setModalVisible(true)}>
@@ -198,17 +239,43 @@ const Productos = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            name="tipoUnidadId"
-            label="Unidad de medida"
-            rules={[{ required: true, message: "Seleccione una unidad" }]}
-          >
-            <Select placeholder="Selecciona una unidad">
-              <Option value={1}>KG</Option>
-              <Option value={2}>Bolsa</Option>
-              <Option value={3}>Unidad</Option>
-            </Select>
-          </Form.Item>
+<Form.Item>
+  <Checkbox
+    checked={registrarNuevaMedida}
+    onChange={e => setRegistrarNuevaMedida(e.target.checked)}
+  >
+    Registrar nueva medida
+  </Checkbox>
+</Form.Item>
+
+{registrarNuevaMedida ? (
+  <Form.Item
+    label="Nombre de la nueva medida"
+    required
+    validateStatus={nombreNuevaMedida ? "success" : "error"}
+    help={!nombreNuevaMedida && "Ingrese el nombre de la nueva medida"}
+  >
+    <Input
+      value={nombreNuevaMedida}
+      onChange={e => setNombreNuevaMedida(e.target.value)}
+      placeholder="Ej: Cajón, Pack, etc."
+    />
+  </Form.Item>
+) : (
+  <Form.Item
+    name="tipoUnidadId"
+    label="Unidad de medida"
+    rules={[{ required: true, message: "Seleccione una unidad" }]}
+  >
+    <Select placeholder="Selecciona una unidad">
+      {tiposUnidades.map((unidad) => (
+        <Option key={unidad.id} value={unidad.id}>
+          {unidad.tipo}
+        </Option>
+      ))}
+    </Select>
+  </Form.Item>
+)}
         </Form>
       </Modal>
     </div>
