@@ -1,7 +1,39 @@
 import React, { useEffect, useState } from "react";
-import { Table, message, Modal, Button, Select, Input, Form, Space, List, Drawer, Card, Badge, Divider, Avatar, Empty, Tag, InputNumber, Row, Col, Checkbox } from "antd";
+import {
+  Table,
+  message,
+  Modal,
+  Button,
+  Select,
+  Input,
+  Form,
+  Space,
+  List,
+  Drawer,
+  Card,
+  Badge,
+  Divider,
+  Avatar,
+  Empty,
+  Tag,
+  InputNumber,
+  Row,
+  Col,
+  Checkbox,
+} from "antd";
 import { api } from "../../services/api";
-import { EyeOutlined, EditOutlined, DeleteOutlined, ShoppingCartOutlined, SearchOutlined, PlusOutlined, MinusOutlined, ShopOutlined, PrinterOutlined, BankOutlined } from "@ant-design/icons";
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ShoppingCartOutlined,
+  SearchOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  ShopOutlined,
+  PrinterOutlined,
+  BankOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -39,19 +71,20 @@ const generarPDF = async (record) => {
       <p><strong>Caja:</strong> ${record.cajaNombre || "No especificada"}</p>
       <p><strong>Total:</strong> $${venta.total.toLocaleString("es-AR")}</p>
       <p><strong>Fecha:</strong> ${dayjs(venta.fechaCreacion).format(
-      "DD/MM/YYYY"
-    )}</p>
+        "DD/MM/YYYY"
+      )}</p>
       <p><strong>Productos:</strong></p>
       <ul>
         ${venta.detalles
-        .map(
-          (d) =>
-            `<li>${d.producto?.nombre || "Producto"} - ${d.cantidad
-            } u. x $${d.precio.toLocaleString("es-AR")} = $${(
-              d.precio * d.cantidad
-            ).toLocaleString("es-AR")}</li>`
-        )
-        .join("")}
+          .map(
+            (d) =>
+              `<li>${d.producto?.nombre || "Producto"} - ${
+                d.cantidad
+              } u. x $${d.precio.toLocaleString("es-AR")} = $${(
+                d.precio * d.cantidad
+              ).toLocaleString("es-AR")}</li>`
+          )
+          .join("")}
       </ul>
     `;
 
@@ -119,7 +152,6 @@ const Ventas = () => {
   const [pageSize] = useState(8);
   const [totalVentas, setTotalVentas] = useState(0);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [esVentaCuentaCorriente, setEsVentaCuentaCorriente] = useState(false);
 
   // Para la caja
   const [cajas, setCajas] = useState([]);
@@ -230,9 +262,10 @@ const Ventas = () => {
       const res = await api("api/getAllProducts");
       const productos = res.products || [];
       // Filtrar en el frontend por coincidencia de nombre
-      const filtrados = productos.filter((producto) =>
-        producto.estado === 1 && 
-        producto.nombre.toLowerCase().includes(productoBuscado.toLowerCase())
+      const filtrados = productos.filter(
+        (producto) =>
+          producto.estado === 1 &&
+          producto.nombre.toLowerCase().includes(productoBuscado.toLowerCase())
       );
 
       setProductosDisponibles(filtrados);
@@ -362,7 +395,6 @@ const Ventas = () => {
         cajaId: parseInt(selectedCaja),
         rol_usuario: rolUsuario,
         detalles,
-        estadoPago: esVentaCuentaCorriente ? 4 : 1, // 4 = cuenta corriente, 1 = pendiente normal
       };
 
       // Guardar la caja seleccionada en sessionStorage
@@ -379,14 +411,12 @@ const Ventas = () => {
           : "¡Venta guardada exitosamente!"
       );
 
-    setModalVisible(false);
-    setVentaEditando(null);
-    setProductosSeleccionados([]);
-    setSelectedNegocio(null);
-    setEsVentaCuentaCorriente(false);
+      setModalVisible(false);
+      setVentaEditando(null);
+      setProductosSeleccionados([]);
+      setSelectedNegocio(null);
 
       fetchVentas(currentPage); // Recargar ventas
-
     } catch (err) {
       message.error("Error al guardar venta: " + err.message);
     } finally {
@@ -665,9 +695,10 @@ const Ventas = () => {
     </List.Item>
   );
 
-  const ventasFiltradas = filtroCaja === "todas"
-  ? ventas
-  : ventas.filter((venta) => String(venta.cajaId) === String(filtroCaja));
+  const ventasFiltradas =
+    filtroCaja === "todas"
+      ? ventas
+      : ventas.filter((venta) => String(venta.cajaId) === String(filtroCaja));
 
   return (
     <div
@@ -684,22 +715,29 @@ const Ventas = () => {
       >
         Registrar Venta
       </Button>
-      <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
-  <span>Filtrar por caja:</span>
-  <Select
-    value={filtroCaja}
-    onChange={setFiltroCaja}
-    style={{ width: 200 }}
-    allowClear={false}
-  >
-    <Option value="todas">Todas las cajas</Option>
-    {cajas.map((caja) => (
-      <Option key={caja.id} value={caja.id}>
-        {caja.nombre}
-      </Option>
-    ))}
-  </Select>
-</div>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
+        <span>Filtrar por caja:</span>
+        <Select
+          value={filtroCaja}
+          onChange={setFiltroCaja}
+          style={{ width: 200 }}
+          allowClear={false}
+        >
+          <Option value="todas">Todas las cajas</Option>
+          {cajas.map((caja) => (
+            <Option key={caja.id} value={caja.id}>
+              {caja.nombre}
+            </Option>
+          ))}
+        </Select>
+      </div>
 
       <Table
         dataSource={ventasFiltradas}
@@ -791,16 +829,6 @@ const Ventas = () => {
                       ))}
                   </Select>
                 </Form.Item>
-                {selectedNegocio && negocios.find(n => n.id === selectedNegocio)?.esCuentaCorriente && (
-                  <Form.Item style={{ margin: "8px 0 0 0" }}>
-                    <Checkbox
-                      checked={esVentaCuentaCorriente}
-                      onChange={e => setEsVentaCuentaCorriente(e.target.checked)}
-                    >
-                      Registrar venta como cuenta corriente
-                    </Checkbox>
-                  </Form.Item>
-                )}
               </Col>
               <Col span={isMobile ? 24 : 12}>
                 <Form.Item label="Caja" style={{ marginBottom: 0 }}>

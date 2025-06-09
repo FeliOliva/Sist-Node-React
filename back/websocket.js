@@ -62,7 +62,7 @@ function setupWebSocket(server, prisma) {
     // Añadir nombreProducto directamente para facilitar en el frontend
     const ventasMejoradas = ventas.map((venta) => ({
       ...venta,
-      detalles: venta.detalles.map((detalle) => ({
+      detalles: (venta.detalles || []).map((detalle) => ({
         ...detalle,
         nombreProducto: detalle.producto?.nombre || "Producto sin nombre",
       })),

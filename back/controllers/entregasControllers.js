@@ -95,18 +95,31 @@ const getEntregas = async (req, res) => {
 
 const cambiarEstadoVenta = async (req, res) => {
   try {
-    const { venta_id, estado } = req.query;
-    if (!venta_id || !estado) {
+    const { venta_id, estado, caja_id } = req.query;
+
+    if (!venta_id || !estado || !caja_id) {
       return res.status(400).json({ error: "Faltan campos obligatorios" });
     }
+
+    // Actualizar la venta
     await entregaModel.updateVenta(venta_id, { estadoPago: parseInt(estado) });
+
+    // Obtener la venta actualizada para emitirla
+    const ventaActualizada = await entregaModel.getVentaById(venta_id);
+
+    const estadoSocket = "venta-actualizada";
+    actualizarVenta(caja_id, ventaActualizada, estadoSocket);
+
     const keys = await redisClient.keys("Ventas:*");
     if (keys.length > 0) {
       await redisClient.del(keys);
     }
     await clearEntregaCache();
 
-    res.json({ message: "Estado de la venta actualizado" });
+    res.json({
+      message: "Estado de la venta actualizado",
+      data: ventaActualizada,
+    });
   } catch (error) {
     console.error("Error al cambiar el estado de la entrega:", error);
     res.status(500).json({ error: "Error al cambiar el estado de la entrega" });

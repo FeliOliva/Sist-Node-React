@@ -29,7 +29,7 @@ import {
   ReloadOutlined,
   FilterOutlined,
   SolutionOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { api } from "../../services/api";
 import Loading from "../../components/Loading";
@@ -127,7 +127,9 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre}`,
+                  nombre: `${
+                    detalle.nombreProducto || detalle.producto?.nombre
+                  }`,
                 },
               })),
             }));
@@ -167,7 +169,9 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre}`,
+                  nombre: `${
+                    detalle.nombreProducto || detalle.producto?.nombre
+                  }`,
                 },
               })),
             };
@@ -185,8 +189,9 @@ const Entregas = () => {
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${nuevaVenta.numero
-                } por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${
+                nuevaVenta.numero
+              } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -252,24 +257,32 @@ const Entregas = () => {
     applyFilter(estadoFiltro);
   }, [estadoFiltro, entregas]);
 
-
   const handleEntregarCuentaCorriente = (entrega) => {
     setEntregaAEntregar(entrega);
     setConfirmEntregaVisible(true);
   };
 
-
-  const handleConfirmEntregar = () => {
+  const handleConfirmEntregar = async () => {
     if (!entregaAEntregar) return;
-    // Cambia el estado de la entrega a "Entregada" (por ejemplo, estado 6)
     const updatedEntregas = entregas.map((item) =>
-      item.id === entregaAEntregar.id
-        ? { ...item, estado: 6 }
-        : item
+      item.id === entregaAEntregar.id ? { ...item, estado: 6 } : item
     );
+    const paymentData = {
+      venta_id: entregaAEntregar.id,
+      estado: 6, // Estado 6 para entregada
+    };
     setEntregas(updatedEntregas);
     setConfirmEntregaVisible(false);
     setEntregaAEntregar(null);
+    //entregas/cambiarEstado
+    const response = await api(
+      `api/entregas/cambiarEstado?venta_id=${
+        entregaAEntregar.id
+      }&estado=6&caja_id=${sessionStorage.getItem("cajaId")}`,
+      "POST"
+    );
+
+    console.log(response);
     notification.success({
       message: "Pedido entregado",
       description: "El pedido fue marcado como entregado.",
@@ -600,7 +613,9 @@ const Entregas = () => {
                         <CalendarOutlined />
                         <span>
                           {entrega.fechaCreacion
-                            ? new Date(entrega.fechaCreacion).toLocaleString("es-AR")
+                            ? new Date(entrega.fechaCreacion).toLocaleString(
+                                "es-AR"
+                              )
                             : ""}
                         </span>
                       </div>
@@ -637,14 +652,14 @@ const Entregas = () => {
                       {(entrega.estado === 1 ||
                         entrega.estado === 3 ||
                         entrega.estado === 5) && (
-                          <Button
-                            type="primary"
-                            size="small"
-                            onClick={() => handleOpenPaymentModal(entrega)}
-                          >
-                            {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
-                          </Button>
-                        )}
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={() => handleOpenPaymentModal(entrega)}
+                        >
+                          {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
+                        </Button>
+                      )}
                       {entrega.estado === 4 && (
                         <Button
                           type="primary"
@@ -675,22 +690,22 @@ const Entregas = () => {
             Cerrar
           </Button>,
           selectedEntrega &&
-          (selectedEntrega.estado === 1 ||
-            selectedEntrega.estado === 3 ||
-            selectedEntrega.estado === 5) && (
-            <Button
-              key="cobrar"
-              type="primary"
-              onClick={() => {
-                handleCloseDetailsModal();
-                handleOpenPaymentModal(selectedEntrega);
-              }}
-            >
-              {selectedEntrega.estado === 5
-                ? "Completar Pago"
-                : "Cobrar Entrega"}
-            </Button>
-          ),
+            (selectedEntrega.estado === 1 ||
+              selectedEntrega.estado === 3 ||
+              selectedEntrega.estado === 5) && (
+              <Button
+                key="cobrar"
+                type="primary"
+                onClick={() => {
+                  handleCloseDetailsModal();
+                  handleOpenPaymentModal(selectedEntrega);
+                }}
+              >
+                {selectedEntrega.estado === 5
+                  ? "Completar Pago"
+                  : "Cobrar Entrega"}
+              </Button>
+            ),
         ]}
         width={600}
       >
@@ -712,8 +727,8 @@ const Entregas = () => {
                   <strong>Fecha:</strong>{" "}
                   {selectedEntrega.fechaCreacion
                     ? new Date(selectedEntrega.fechaCreacion).toLocaleString(
-                      "es-AR"
-                    )
+                        "es-AR"
+                      )
                     : ""}
                 </p>
               </div>
@@ -723,10 +738,10 @@ const Entregas = () => {
                   {selectedEntrega.estado === 5
                     ? "PAGO PARCIAL"
                     : selectedEntrega.estado === 3
-                      ? "PAGO OTRO DÍA"
-                      : selectedEntrega.estado === 2
-                        ? "COBRADA"
-                        : "PENDIENTE"}
+                    ? "PAGO OTRO DÍA"
+                    : selectedEntrega.estado === 2
+                    ? "COBRADA"
+                    : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.estado !== 3 && (
@@ -761,7 +776,9 @@ const Entregas = () => {
                   <div className="flex w-full justify-between">
                     <div className="flex-1">
                       <div className="font-medium">
-                        {item.nombreProducto || item.producto?.nombre || "Producto sin nombre"}
+                        {item.nombreProducto ||
+                          item.producto?.nombre ||
+                          "Producto sin nombre"}
                       </div>
                       <div className="text-gray-600">
                         {item.cantidad} x {formatMoney(item.precio)}
@@ -794,7 +811,9 @@ const Entregas = () => {
         cancelText="Cancelar"
         title={
           <span>
-            <ExclamationCircleOutlined style={{ color: "#faad14", marginRight: 8 }} />
+            <ExclamationCircleOutlined
+              style={{ color: "#faad14", marginRight: 8 }}
+            />
             ¿Desea entregar el pedido?
           </span>
         }
@@ -866,7 +885,9 @@ const Entregas = () => {
             <Checkbox
               checked={payLater}
               onChange={handlePayLaterChange}
-              disabled={selectedEntrega?.estado === 3 || selectedEntrega?.estado === 5}
+              disabled={
+                selectedEntrega?.estado === 3 || selectedEntrega?.estado === 5
+              }
             >
               Marcar para pago en otra fecha
             </Checkbox>
@@ -901,17 +922,19 @@ const Entregas = () => {
                   payLater
                     ? "Desactive 'Pagar otro día' para ingresar un monto"
                     : selectedEntrega?.estado === 5
-                      ? `Monto pendiente: ${formatMoney(
+                    ? `Monto pendiente: ${formatMoney(
                         selectedEntrega?.resto_pendiente || 0
                       )}`
-                      : ""
+                    : ""
                 }
               >
                 <Input
                   prefix={<DollarOutlined />}
                   placeholder={
                     selectedEntrega?.estado === 5
-                      ? `Ingrese el monto a pagar (Pendiente: ${formatMoney(selectedEntrega?.resto_pendiente || 0)})`
+                      ? `Ingrese el monto a pagar (Pendiente: ${formatMoney(
+                          selectedEntrega?.resto_pendiente || 0
+                        )})`
                       : "Ingrese el monto recibido"
                   }
                   value={paymentAmount}

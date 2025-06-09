@@ -75,12 +75,23 @@ const getVentaById = async (id) => {
   try {
     return await prisma.venta.findUnique({
       where: { id: parseInt(id) },
+      include: {
+        detalles: {
+          include: {
+            producto: { select: { nombre: true } }, // Incluye nombre del producto
+          },
+        },
+        negocio: {
+          select: { nombre: true },
+        },
+      },
     });
   } catch (error) {
     console.error("Error obteniendo venta por id:", error);
     throw new Error("Error al obtener la venta por id");
   }
 };
+
 const getEntregasByNegocio = async (
   negocioId,
   limit,

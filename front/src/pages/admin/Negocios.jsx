@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, message, Typography, Checkbox } from "antd";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  message,
+  Typography,
+  Checkbox,
+} from "antd";
 import { useParams } from "react-router-dom";
 import { api } from "../../services/api";
 
@@ -75,9 +84,10 @@ const Negocios = () => {
       if (filtroEstado === "inactivos") return n.estado === 0;
       return true;
     })
-    .filter((n) =>
-      n.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      n.direccion.toLowerCase().includes(busqueda.toLowerCase())
+    .filter(
+      (n) =>
+        n.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        n.direccion.toLowerCase().includes(busqueda.toLowerCase())
     );
 
   const negociosOrdenados = [...negociosFiltrados].sort((a, b) => {
@@ -102,7 +112,7 @@ const Negocios = () => {
       title: "Cuenta Corriente",
       dataIndex: "esCuentaCorriente",
       key: "esCuentaCorriente",
-      render: (value) => value ? "Sí" : "No",
+      render: (value) => (value ? "Sí" : "No"),
     },
     {
       title: "Estado",
@@ -118,17 +128,24 @@ const Negocios = () => {
     {
       title: "Acciones",
       key: "acciones",
-      render: (_, record) => (
+      render: (_, record) =>
         record.estado === 1 ? (
-          <Button danger size="small" onClick={() => handleDeshabilitar(record.id)}>
+          <Button
+            danger
+            size="small"
+            onClick={() => handleDeshabilitar(record.id)}
+          >
             Deshabilitar
           </Button>
         ) : (
-          <Button type="primary" size="small" onClick={() => handleHabilitar(record.id)}>
+          <Button
+            type="primary"
+            size="small"
+            onClick={() => handleHabilitar(record.id)}
+          >
             Habilitar
           </Button>
-        )
-      ),
+        ),
     },
   ];
 
@@ -145,7 +162,7 @@ const Negocios = () => {
         <Input
           placeholder="Buscar por nombre o dirección"
           value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
+          onChange={(e) => setBusqueda(e.target.value)}
           style={{ width: 250 }}
         />
         <Button
