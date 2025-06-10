@@ -3,13 +3,10 @@ const resumenCuentaModel = require("../models/resumenCuentaModel");
 const getResumenCuentaByNegocio = async (req, res) => {
   try {
     const { id } = req.params;
-    const { cajaId, startDate, endDate } = req.query;
+    const { startDate, endDate } = req.query;
 
     if (!id) {
       return res.status(400).json({ error: "El id es obligatorio" });
-    }
-    if (!cajaId) {
-      return res.status(400).json({ error: "El ID de la caja es obligatorio" });
     }
     if (!startDate || !endDate) {
       return res
@@ -24,7 +21,6 @@ const getResumenCuentaByNegocio = async (req, res) => {
       parseInt(id),
       filterStartDate,
       filterEndDate,
-      parseInt(cajaId)
     );
     res.json(resumenData);
   } catch (error) {

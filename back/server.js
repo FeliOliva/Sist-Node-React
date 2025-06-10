@@ -26,6 +26,8 @@ const tiposUnidadesRoutes = require("./routes/tiposUnidadesRoutes");
 const chequesRoutes = require("./routes/chequeRoutes");
 const resumenCuentaRoutes = require("./routes/resumenCuenta");
 const cajaRoutes = require("./routes/cajaRoutes");
+const metodosPagoRoutes = require("./routes/metodosPagoRoutes");
+
 
 app.use(
   cors({
@@ -87,7 +89,8 @@ app.use(
   notasCreditoRoutes,
   tiposUnidadesRoutes,
   chequesRoutes,
-  cajaRoutes
+  cajaRoutes, 
+  metodosPagoRoutes
 );
 
 server.listen(PORT, () => {

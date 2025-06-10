@@ -4,14 +4,12 @@ const prisma = new PrismaClient();
 const getResumenCuentaByNegocio = async (
   negocioId,
   startDate,
-  endDate,
-  cajaId
+  endDate
 ) => {
   const [ventas, entregas, notasCredito] = await Promise.all([
     prisma.venta.findMany({
       where: {
         negocioId,
-        cajaId,
         fechaCreacion: {
           gte: new Date(startDate),
           lte: new Date(endDate),
@@ -22,6 +20,7 @@ const getResumenCuentaByNegocio = async (
         nroVenta: true,
         fechaCreacion: true,
         total: true,
+        cajaId: true,
         detalles: {
           // Incluye los detalles de la venta
           select: {
@@ -42,7 +41,6 @@ const getResumenCuentaByNegocio = async (
     prisma.entregas.findMany({
       where: {
         negocioId,
-        cajaId,
         fechaCreacion: {
           gte: new Date(startDate),
           lte: new Date(endDate),
@@ -63,7 +61,6 @@ const getResumenCuentaByNegocio = async (
     prisma.notaCredito.findMany({
       where: {
         negocioId,
-        cajaId,
         fechaCreacion: {
           gte: new Date(startDate),
           lte: new Date(endDate),
@@ -86,6 +83,7 @@ const getResumenCuentaByNegocio = async (
       fecha: v.fechaCreacion,
       monto: v.total,
       metodo_pago: null,
+      cajaId: v.cajaId,
       detalles: v.detalles, // Incluye los detalles en el resultado
     })),
     ...entregas.map((e) => ({
