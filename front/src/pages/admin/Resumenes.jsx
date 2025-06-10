@@ -18,7 +18,13 @@ import {
   DeleteOutlined,
   MoreOutlined,
   FilterOutlined,
+  PlusOutlined,
+  PrinterFilled,
+  PrinterOutlined,
+  CaretDownOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
+import logo from "../../assets/logo.png";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -40,6 +46,11 @@ const VentasPorNegocio = () => {
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
   const [actionDrawerVisible, setActionDrawerVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isAddPagoOpen, setIsAddPagoOpen] = useState(false);
+  const [nuevoMonto, setNuevoMonto] = useState(null);
+  const [nuevoMetodoPago, setNuevoMetodoPago] = useState(null);
+  const [loadingPago, setLoadingPago] = useState(false)
+  const [metodosPago, setMetodosPago] = useState([]);
 
   // Detectar el ancho de la pantalla
   useEffect(() => {
@@ -67,6 +78,20 @@ const VentasPorNegocio = () => {
     };
     fetchNegocios();
   }, []);
+
+
+
+  useEffect(() => {
+  const fetchMetodosPago = async () => {
+    try {
+      const res = await api("api/metodosPago");
+      setMetodosPago(res);
+    } catch (err) {
+      message.error("Error al cargar métodos de pago");
+    }
+  };
+  fetchMetodosPago();
+}, []);
 
   const handleEditarVenta = async (record) => {
     try {
@@ -109,6 +134,32 @@ const VentasPorNegocio = () => {
       },
     });
   };
+
+const handleAgregarPago = async () => {
+  if (!negocioSeleccionado || !nuevoMonto || !nuevoMetodoPago) {
+    message.warning("Completa todos los campos para agregar el pago");
+    return;
+  }
+  setLoadingPago(true);
+  try {
+    const cajaId = parseInt(sessionStorage.getItem("cajaId"), 10);
+    await api("api/entregas", "POST", {
+      monto: nuevoMonto,
+      metodoPagoId: nuevoMetodoPago,
+      negocioId: negocioSeleccionado,
+      cajaId, // <--- AGREGA ESTA LÍNEA
+    });
+    message.success("Pago registrado correctamente");
+    setIsAddPagoOpen(false);
+    setNuevoMonto(null);
+    setNuevoMetodoPago(null);
+    obtenerResumen();
+  } catch (err) {
+    message.error("Error al registrar el pago");
+  } finally {
+    setLoadingPago(false);
+  }
+};
 
   const handleVerDetalle = async (record) => {
     const { tipo, id, negocioId } = record;
@@ -215,8 +266,10 @@ const VentasPorNegocio = () => {
 
     try {
       const res = await api(
-        `api/resumenCuenta/negocio/${negocioSeleccionado}?startDate=${startDate}&endDate=${endDate}&cajaId=${cajaId}`
+        `api/resumenCuenta/negocio/${negocioSeleccionado}?startDate=${startDate}&endDate=${endDate}`
       );
+
+      console.log(res);
 
       let saldoAcumulado = 0;
 
@@ -416,11 +469,22 @@ const VentasPorNegocio = () => {
     }
   };
 
+  const handleImprimirResumen = () => {
+    const printContents = document.getElementById("printableArea").innerHTML;
+    const originalContents = document.body.innerHTML;
+
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload(); // para recargar el contenido original
+  };
+
   // Renderizado principal
   return (
     <div className="p-2 md:p-4 space-y-4">
       {/* Filtros para pantallas grandes */}
       {!isMobile && (
+
         <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
           <Select
             style={{ width: "100%", maxWidth: 250 }}
@@ -428,11 +492,13 @@ const VentasPorNegocio = () => {
             onChange={setNegocioSeleccionado}
             value={negocioSeleccionado}
           >
-            {negocios.map((n) => (
-              <Option key={n.id} value={n.id}>
-                {n.nombre}
-              </Option>
-            ))}
+            {negocios
+              .filter((n) => n.estado === 1 && n.esCuentaCorriente)
+              .map((n) => (
+                <Option key={n.id} value={n.id}>
+                  {n.nombre}
+                </Option>
+              ))}
           </Select>
 
           <RangePicker
@@ -444,8 +510,34 @@ const VentasPorNegocio = () => {
           <Button type="primary" onClick={handleBuscarTransacciones}>
             Buscar Movimientos
           </Button>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={handleImprimirResumen}
+            type="primary"
+          >
+            Imprimir
+          </Button>
+
+          <Button
+            icon={<CreditCardOutlined />}
+            onClick={() => setIsAddPagoOpen(true) }
+            type="primary"
+            disabled={!negocioSeleccionado}
+          >
+            Agregar Pago
+          </Button>
+
+          <Button
+            icon={<PlusOutlined />}
+            // onClick={() => setFilterDrawerVisible(true)}
+            type="primary"
+            disabled={!negocioSeleccionado}
+          >
+            Agregar Nota de Crédito
+          </Button>
         </div>
       )}
+      
 
       {/* Botón de filtro para móviles */}
       {isMobile && (
@@ -566,6 +658,43 @@ const VentasPorNegocio = () => {
         </Drawer>
       )}
 
+      <Modal
+  title="Agregar Pago/Entrega"
+  open={isAddPagoOpen}
+  onCancel={() => setIsAddPagoOpen(false)}
+  onOk={handleAgregarPago}
+  okText="Registrar"
+  confirmLoading={loadingPago}
+>
+  <div className="space-y-4">
+    <div>
+      <label>Monto</label>
+      <InputNumber
+        value={nuevoMonto}
+        onChange={setNuevoMonto}
+        min={1}
+        style={{ width: "100%" }}
+        placeholder="Monto"
+      />
+    </div>
+    <div>
+      <label>Método de pago</label>
+<Select
+  value={nuevoMetodoPago}
+  onChange={setNuevoMetodoPago}
+  placeholder="Selecciona método de pago"
+  style={{ width: "100%" }}
+>
+  {metodosPago.map((m) => (
+    <Option key={m.id} value={m.id}>
+      {m.nombre}
+    </Option>
+  ))}
+</Select>
+    </div>
+  </div>
+</Modal>
+
       {/* Drawer para filtros en móvil - Ahora con DatePicker individuales */}
       <Drawer
         title="Filtros"
@@ -583,7 +712,9 @@ const VentasPorNegocio = () => {
               onChange={setNegocioSeleccionado}
               value={negocioSeleccionado}
             >
-              {negocios.map((n) => (
+              {negocios
+              .filter((n) => n.estado === 1 && n.esCuentaCorriente)
+              .map((n) => (
                 <Option key={n.id} value={n.id}>
                   {n.nombre}
                 </Option>
@@ -622,8 +753,37 @@ const VentasPorNegocio = () => {
           >
             Buscar Movimientos
           </Button>
+          <Button
+            icon={<PrinterFilled />}
+            onClick={handleImprimirResumen}
+            type="primary"
+            style={{ width: "100%" }}
+          >
+            Imprimir Resumen
+          </Button>
+          <Button
+            icon={<CreditCardOutlined />}
+            onClick={() => setIsAddPagoOpen(true)}
+            type="primary"
+            style={{ width: "100%" }}
+            disabled={!negocioSeleccionado}
+          >
+            Agregar Pago
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => setModalVisible(true)}
+            type="primary"
+            style={{ width: "100%" }}
+            disabled={!negocioSeleccionado}
+          >
+            Agregar Nota de Crédito
+          </Button>
+
         </div>
       </Drawer>
+
+      
 
       {/* Drawer para acciones en móvil */}
       <Drawer
@@ -682,7 +842,50 @@ const VentasPorNegocio = () => {
           </div>
         )}
       </Drawer>
+
+      <div id="printableArea" className="hidden print:block p-6">
+        <div className="text-center mb-4">
+          <img src={logo} alt="Logo" className="mx-auto mb-2" style={{ width: "100px" }} />
+          <h1 className="text-2xl font-bold">Mi Familia</h1>
+          <h2 className="text-xl mt-2">Resumen de Cuenta</h2>
+          {negocios.find((n) => n.id === negocioSeleccionado)?.nombre && (
+            <p className="mt-2">
+              Negocio: <strong>{negocios.find((n) => n.id === negocioSeleccionado)?.nombre}</strong>
+            </p>
+          )}
+          {fechaInicio && fechaFin && (
+            <p>
+              Desde: {dayjs(fechaInicio).format("DD/MM/YYYY")} hasta:{" "}
+              {dayjs(fechaFin).format("DD/MM/YYYY")}
+            </p>
+          )}
+        </div>
+
+        <table className="w-full text-sm border border-black border-collapse">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border border-black p-2">Tipo</th>
+              <th className="border border-black p-2">Fecha</th>
+              <th className="border border-black p-2">Monto</th>
+              <th className="border border-black p-2">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transacciones.map((item) => (
+              <tr key={item.uniqueId}>
+                <td className="border border-black p-2">{item.tipo}</td>
+                <td className="border border-black p-2">{dayjs(item.fecha).format("DD/MM/YYYY")}</td>
+                <td className="border border-black p-2">${item.monto_formateado}</td>
+                <td className="border border-black p-2">
+                  ${item.saldo_restante.toLocaleString("es-AR")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
+
   );
 };
 

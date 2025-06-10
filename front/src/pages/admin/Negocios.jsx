@@ -21,6 +21,8 @@ const Negocios = () => {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // NUEVO: estados para búsqueda y filtro de estado
   const [busqueda, setBusqueda] = useState("");
@@ -97,6 +99,7 @@ const Negocios = () => {
     return new Date(b.fechaCreacion) - new Date(a.fechaCreacion);
   });
 
+
   const columns = [
     {
       title: "Nombre",
@@ -149,15 +152,19 @@ const Negocios = () => {
     },
   ];
 
+const negociosPaginados = negociosOrdenados.slice(
+  (currentPage - 1) * pageSize,
+  currentPage * pageSize
+);
+
   return (
-    <div className="p-6">
+    <div >
       <div className="flex justify-between items-center mb-4">
         <Button type="primary" onClick={() => setModalVisible(true)}>
           Agregar Negocio
         </Button>
       </div>
 
-      {/* NUEVO: Buscador y botones de filtro */}
       <div className="flex gap-2 mb-4">
         <Input
           placeholder="Buscar por nombre o dirección"
@@ -185,14 +192,24 @@ const Negocios = () => {
         </Button>
       </div>
 
-      <Table
-        dataSource={negociosOrdenados}
-        columns={columns}
-        loading={loading}
-        rowKey="id"
-        pagination={false}
-        bordered
-      />
+<Table
+  dataSource={negociosPaginados}
+  columns={columns}
+  loading={loading}
+  rowKey="id"
+  pagination={{
+    current: currentPage,
+    pageSize: pageSize,
+    total: negociosOrdenados.length,
+    onChange: (page, size) => {
+      setCurrentPage(page);
+      setPageSize(size);
+    },
+    showSizeChanger: true,
+    pageSizeOptions: ["5", "10", "20", "50"],
+    position: ["bottomCenter"],
+  }}
+/>
 
       <Modal
         title="Agregar Nuevo Negocio"
