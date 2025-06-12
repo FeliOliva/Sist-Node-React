@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const cors = require("cors");
 const { setupWebSocket } = require("./websocket"); // nuevo
 const http = require("http");
+require("./CierreAuto/cierreCajaAuto");
 
 const app = express();
 const PORT = process.env.PORT;

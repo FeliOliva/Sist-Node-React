@@ -31,11 +31,13 @@ const crearCierreCaja = async (data) => {
       data: {
         fecha: new Date(),
         usuarioId: data.usuarioId,
+        cajaId: data.cajaId,
         totalVentas: data.totalVentas,
         totalPagado: data.totalPagado,
         totalCuentaCorriente: data.totalCuentaCorriente || 0,
         totalDiferido: data.totalDiferido || 0,
         ingresoLimpio: data.ingresoLimpio || 0,
+        estado: "cerrado",
       },
     });
   } catch (error) {
@@ -47,8 +49,9 @@ const crearCierreCaja = async (data) => {
 const getCierresCaja = async () => {
   try {
     return await prisma.cierreCaja.findMany({
-      include: { usuario: { select: { usuario: true } } },
+      include: { usuario: { select: { usuario: true } }, caja: { select: { nombre: true } } },
       orderBy: { fecha: "desc" },
+
     });
   } catch (error) {
     console.error("Error al obtener cierres de caja:", error);
@@ -56,8 +59,52 @@ const getCierresCaja = async () => {
   }
 };
 
+const crearCierreCajaPendiente = async (cajaId, totalVentas = 0) => {
+  try {
+    return await prisma.cierreCaja.create({
+      data: {
+        fecha: new Date(),
+        usuarioId: null,
+        cajaId,
+        totalVentas,
+        totalPagado: 0,
+        totalCuentaCorriente: 0,
+        totalDiferido: 0,
+        ingresoLimpio: 0,
+        estado: "pendiente"
+      },
+    });
+  } catch (error) {
+    console.error("Error al crear cierre de caja pendiente:", error);
+    throw new Error("Error al crear cierre de caja pendiente");
+  }
+};
+
+const cerrarCierreCajaPendiente = async (cierreId, usuarioId) => {
+  try {
+    return await prisma.cierreCaja.update({
+      where: { id: cierreId },
+      data: {
+        estado: "cerrado",
+        usuarioId,
+        fecha: new Date(), // opcional: actualiza la fecha de cierre
+      },
+    });
+  } catch (error) {
+    console.error("Error al cerrar cierre pendiente:", error);
+    throw new Error("Error al cerrar cierre pendiente");
+  }
+};
+
+module.exports = {
+  // ...otros métodos...
+  cerrarCierreCajaPendiente,
+};
+
 module.exports = {
   getCajas,
   crearCierreCaja,
   getCierresCaja,
+  crearCierreCajaPendiente,
+  cerrarCierreCajaPendiente,
 };

@@ -701,62 +701,62 @@ const Ventas = () => {
       : ventas.filter((venta) => String(venta.cajaId) === String(filtroCaja));
 
   return (
-    <div
-      className="responsive-container"
-      style={{ width: "100%", overflowX: "auto" }}
-    >
-      <Button
-        type="primary"
-        onClick={() => {
-          setModalVisible(true);
-        }}
-        icon={<PlusOutlined />}
-        style={{ marginBottom: 20 }}
-      >
-        Registrar Venta
-      </Button>
-      <div
-        style={{
-          marginBottom: 16,
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-        }}
-      >
-        <span>Filtrar por caja:</span>
-        <Select
-          value={filtroCaja}
-          onChange={setFiltroCaja}
-          style={{ width: 200 }}
-          allowClear={false}
-        >
-          <Option value="todas">Todas las cajas</Option>
-          {cajas.map((caja) => (
-            <Option key={caja.id} value={caja.id}>
-              {caja.nombre}
-            </Option>
-          ))}
-        </Select>
+  <div className="p-4 max-w-7xl mx-auto">
+      {/* Tarjeta de acciones y filtros */}
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2 sm:mb-0">Ventas</h2>
+          <Button
+            type="primary"
+            onClick={() => setModalVisible(true)}
+            icon={<PlusOutlined />}
+          >
+            Registrar Venta
+          </Button>
+        </div>
+        <div className="px-4 py-4 flex flex-col md:flex-row md:items-center gap-2">
+          <span>Filtrar por caja:</span>
+          <Select
+            value={filtroCaja}
+            onChange={setFiltroCaja}
+            style={{ width: 200 }}
+            allowClear={false}
+          >
+            <Option value="todas">Todas las cajas</Option>
+            {cajas.map((caja) => (
+              <Option key={caja.id} value={caja.id}>
+                {caja.nombre}
+              </Option>
+            ))}
+          </Select>
+        </div>
       </div>
 
-      <Table
-        dataSource={ventasFiltradas}
-        columns={columns}
-        loading={loading}
-        rowKey="id"
-        style={{ marginTop: 20 }}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: totalVentas,
-          onChange: (page) => setCurrentPage(page),
-          position: ["bottomCenter"],
-          size: isMobile ? "small" : "default",
-          responsive: true,
-        }}
-        size={isMobile ? "small" : "default"}
-        scroll={{ x: "max-content" }}
-      />
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Listado de Ventas</h2>
+        </div>
+        <div className="overflow-x-auto px-4 py-4">
+          <Table
+            dataSource={ventasFiltradas}
+            columns={columns}
+            loading={loading}
+            rowKey="id"
+            style={{ marginTop: 20 }}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: totalVentas,
+              onChange: (page) => setCurrentPage(page),
+              position: ["bottomCenter"],
+              size: isMobile ? "small" : "default",
+              responsive: true,
+            }}
+            size="small"
+            scroll={{ x: "max-content" }}
+          />
+        </div>
+      </div>
 
       <Modal
         title={

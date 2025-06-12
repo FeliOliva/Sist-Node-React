@@ -154,61 +154,83 @@ const onFinish = async (values) => {
         );
       },
     },
-    {
-      title: "Acciones",
-      key: "acciones",
-      render: (text, record) => (
-        <Space size="middle">
-          <Button
-            type="primary"
-            onClick={() => toggleProductos(record.id, record.estado)}
-          >
-            {record.estado === 1 ? "Desactivar" : "Activar"}
-          </Button>
-        </Space>
-      ),
-    },
+{
+  title: "Acciones",
+  key: "acciones",
+  render: (text, record) => (
+    <Space size="middle">
+      {record.estado === 1 ? (
+        <Button
+          danger
+          type="primary"
+          size="small"
+          style={{ backgroundColor: "white", borderColor: "#ff4d4f", color: "#ff4d4f" }}
+          onClick={() => toggleProductos(record.id, record.estado)}
+        >
+          Desactivar
+        </Button>
+      ) : (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => toggleProductos(record.id, record.estado)}
+        >
+          Activar
+        </Button>
+      )}
+    </Space>
+  ),
+},
   ];
   const productosFiltrados = productos.filter((p) =>
     p.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
   return (
-    <div
-      className="responsive-container"
-      style={{ width: "100%", overflowX: "auto" }}
-    >
-      <div style={{ marginBottom: 16, textAlign: "left" }}>
-        <Input
-          placeholder="Buscar por nombre"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          style={{ width: 300, marginTop: 10, marginRight: 10 }}
-        />
-
-        <Button type="primary" onClick={() => setModalVisible(true)}>
-          Agregar Producto
-        </Button>
+    <div className="p-4 max-w-7xl mx-auto">
+      {/* Tarjeta de acciones y filtros */}
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2 sm:mb-0">Productos</h2>
+          <Button type="primary" onClick={() => setModalVisible(true)}>
+            Agregar Producto
+          </Button>
+        </div>
+        <div className="px-4 py-4 flex flex-col md:flex-row md:items-center gap-2">
+          <Input
+            placeholder="Buscar por nombre"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={{ width: 300, marginTop: 10, marginRight: 10 }}
+          />
+        </div>
+      </div>
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Listado de Productos</h2>
+        </div>
+        <div className="overflow-x-auto px-4 py-4">
+          <Table
+            dataSource={productosFiltrados}
+            columns={columns}
+            loading={loading}
+            rowKey="id"
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: total,
+              onChange: (page) => fetchProductos(page),
+              responsive: true,
+              position: ["bottomCenter"],
+              size: "small",
+            }}
+            size="small"
+            scroll={{ x: "max-content" }}
+          />
+        </div>
       </div>
 
-      <Table
-        dataSource={productosFiltrados}
-        columns={columns}
-        loading={loading}
-        rowKey="id"
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: total,
-          onChange: (page) => fetchProductos(page),
-          responsive: true,
-          position: ["bottomCenter"],
-          size: "small",
-        }}
-        size="small"
-        scroll={{ x: "max-content" }}
-      />
-
+      {/* Modal para agregar producto */}
       <Modal
         title="Agregar producto"
         open={modalVisible}
@@ -239,43 +261,43 @@ const onFinish = async (values) => {
             />
           </Form.Item>
 
-<Form.Item>
-  <Checkbox
-    checked={registrarNuevaMedida}
-    onChange={e => setRegistrarNuevaMedida(e.target.checked)}
-  >
-    Registrar nueva medida
-  </Checkbox>
-</Form.Item>
+          <Form.Item>
+            <Checkbox
+              checked={registrarNuevaMedida}
+              onChange={e => setRegistrarNuevaMedida(e.target.checked)}
+            >
+              Registrar nueva medida
+            </Checkbox>
+          </Form.Item>
 
-{registrarNuevaMedida ? (
-  <Form.Item
-    label="Nombre de la nueva medida"
-    required
-    validateStatus={nombreNuevaMedida ? "success" : "error"}
-    help={!nombreNuevaMedida && "Ingrese el nombre de la nueva medida"}
-  >
-    <Input
-      value={nombreNuevaMedida}
-      onChange={e => setNombreNuevaMedida(e.target.value)}
-      placeholder="Ej: Cajón, Pack, etc."
-    />
-  </Form.Item>
-) : (
-  <Form.Item
-    name="tipoUnidadId"
-    label="Unidad de medida"
-    rules={[{ required: true, message: "Seleccione una unidad" }]}
-  >
-    <Select placeholder="Selecciona una unidad">
-      {tiposUnidades.map((unidad) => (
-        <Option key={unidad.id} value={unidad.id}>
-          {unidad.tipo}
-        </Option>
-      ))}
-    </Select>
-  </Form.Item>
-)}
+          {registrarNuevaMedida ? (
+            <Form.Item
+              label="Nombre de la nueva medida"
+              required
+              validateStatus={nombreNuevaMedida ? "success" : "error"}
+              help={!nombreNuevaMedida && "Ingrese el nombre de la nueva medida"}
+            >
+              <Input
+                value={nombreNuevaMedida}
+                onChange={e => setNombreNuevaMedida(e.target.value)}
+                placeholder="Ej: Cajón, Pack, etc."
+              />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="tipoUnidadId"
+              label="Unidad de medida"
+              rules={[{ required: true, message: "Seleccione una unidad" }]}
+            >
+              <Select placeholder="Selecciona una unidad">
+                {tiposUnidades.map((unidad) => (
+                  <Option key={unidad.id} value={unidad.id}>
+                    {unidad.tipo}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>

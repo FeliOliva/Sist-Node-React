@@ -8,7 +8,7 @@ import {
   Modal,
   InputNumber,
   Drawer,
-  Space,
+  Input,
 } from "antd";
 import dayjs from "dayjs";
 import { api } from "../../services/api";
@@ -51,7 +51,10 @@ const VentasPorNegocio = () => {
   const [nuevoMetodoPago, setNuevoMetodoPago] = useState(null);
   const [loadingPago, setLoadingPago] = useState(false)
   const [metodosPago, setMetodosPago] = useState([]);
-
+  const [isAddNotaCreditoOpen, setIsAddNotaCreditoOpen] = useState(false);
+  const [motivoNotaCredito, setMotivoNotaCredito] = useState("");
+  const [montoNotaCredito, setMontoNotaCredito] = useState(null);
+  const [loadingNotaCredito, setLoadingNotaCredito] = useState(false);
   // Detectar el ancho de la pantalla
   useEffect(() => {
     const handleResize = () => {
@@ -82,16 +85,16 @@ const VentasPorNegocio = () => {
 
 
   useEffect(() => {
-  const fetchMetodosPago = async () => {
-    try {
-      const res = await api("api/metodosPago");
-      setMetodosPago(res);
-    } catch (err) {
-      message.error("Error al cargar métodos de pago");
-    }
-  };
-  fetchMetodosPago();
-}, []);
+    const fetchMetodosPago = async () => {
+      try {
+        const res = await api("api/metodosPago");
+        setMetodosPago(res);
+      } catch (err) {
+        message.error("Error al cargar métodos de pago");
+      }
+    };
+    fetchMetodosPago();
+  }, []);
 
   const handleEditarVenta = async (record) => {
     try {
@@ -135,47 +138,67 @@ const VentasPorNegocio = () => {
     });
   };
 
-const handleAgregarPago = async () => {
-  if (!negocioSeleccionado || !nuevoMonto || !nuevoMetodoPago) {
-    message.warning("Completa todos los campos para agregar el pago");
-    return;
-  }
-  setLoadingPago(true);
-  try {
-    const cajaId = parseInt(sessionStorage.getItem("cajaId"), 10);
-    await api("api/entregas", "POST", {
-      monto: nuevoMonto,
-      metodoPagoId: nuevoMetodoPago,
-      negocioId: negocioSeleccionado,
-      cajaId, // <--- AGREGA ESTA LÍNEA
-    });
-    message.success("Pago registrado correctamente");
-    setIsAddPagoOpen(false);
-    setNuevoMonto(null);
-    setNuevoMetodoPago(null);
-    obtenerResumen();
-  } catch (err) {
-    message.error("Error al registrar el pago");
-  } finally {
-    setLoadingPago(false);
-  }
-};
+  const handleAgregarPago = async () => {
+    if (!negocioSeleccionado || !nuevoMonto || !nuevoMetodoPago) {
+      message.warning("Completa todos los campos para agregar el pago");
+      return;
+    }
+    setLoadingPago(true);
+    try {
+      const cajaId = parseInt(sessionStorage.getItem("cajaId"), 10);
+      await api("api/entregas", "POST", {
+        monto: nuevoMonto,
+        metodoPagoId: nuevoMetodoPago,
+        negocioId: negocioSeleccionado,
+        cajaId, // <--- AGREGA ESTA LÍNEA
+      });
+      message.success("Pago registrado correctamente");
+      setIsAddPagoOpen(false);
+      setNuevoMonto(null);
+      setNuevoMetodoPago(null);
+      obtenerResumen();
+    } catch (err) {
+      message.error("Error al registrar el pago");
+    } finally {
+      setLoadingPago(false);
+    }
+  };
+
+  const handleAgregarNotaCredito = async () => {
+    if (!negocioSeleccionado || !motivoNotaCredito || !montoNotaCredito) {
+      message.warning("Completa todos los campos para agregar la nota de crédito");
+      return;
+    }
+    setLoadingNotaCredito(true);
+    try {
+      await api("api/notasCredito", "POST", {
+        motivo: motivoNotaCredito,
+        monto: montoNotaCredito,
+        negocioId: negocioSeleccionado,
+      });
+      message.success("Nota de crédito registrada correctamente");
+      setIsAddNotaCreditoOpen(false);
+      setMotivoNotaCredito("");
+      setMontoNotaCredito(null);
+      obtenerResumen();
+    } catch (err) {
+      message.error("Error al registrar la nota de crédito");
+    } finally {
+      setLoadingNotaCredito(false);
+    }
+  };
 
   const handleVerDetalle = async (record) => {
-    const { tipo, id, negocioId } = record;
+    const { tipo, id } = record;
     try {
       if (tipo === "Nota de Crédito") {
         const res = await api(
-          `api/notasCredito/negocio/${negocioId}?page=1&limit=10`
+          `api/notasCredito/${id}`
         );
-        const nota = res.notasCredito.find((n) => n.id === id);
+        const nota = res;
         setModalTitle("Detalle de Nota de Crédito");
         setModalContent(
           <div className="text-sm">
-            <p>
-              <strong>Cliente:</strong> {nota.cliente?.nombre}{" "}
-              {nota.cliente?.apellido}
-            </p>
             <p>
               <strong>Motivo:</strong> {nota.motivo}
             </p>
@@ -196,10 +219,6 @@ const handleAgregarPago = async () => {
         setModalTitle("Detalle de Venta");
         setModalContent(
           <div className="text-sm">
-            <p>
-              <strong>Cliente:</strong> {venta.cliente?.nombre}{" "}
-              {venta.cliente?.apellido}
-            </p>
             <p>
               <strong>Total:</strong> ${venta.total.toLocaleString("es-AR")}
             </p>
@@ -402,6 +421,7 @@ const handleAgregarPago = async () => {
                 icon={<EditOutlined />}
                 onClick={() => handleEditarVenta(record)}
                 size="small"
+                disabled={record.tipo === "Nota de Crédito"}
               />
               <Button
                 danger
@@ -456,6 +476,7 @@ const handleAgregarPago = async () => {
               <Button
                 icon={<EditOutlined />}
                 onClick={() => handleEditarVenta(record)}
+                disabled={record.tipo === "Nota de Crédito"}
               />
               <Button
                 danger
@@ -481,11 +502,13 @@ const handleAgregarPago = async () => {
 
   // Renderizado principal
   return (
-    <div className="p-2 md:p-4 space-y-4">
-      {/* Filtros para pantallas grandes */}
-      {!isMobile && (
-
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
+   <div className="p-4 max-w-7xl mx-auto">
+      {/* Filtros */}
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Resumen por Negocio</h2>
+        </div>
+        <div className="px-4 py-4 flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
           <Select
             style={{ width: "100%", maxWidth: 250 }}
             placeholder="Selecciona un negocio"
@@ -517,27 +540,25 @@ const handleAgregarPago = async () => {
           >
             Imprimir
           </Button>
-
           <Button
             icon={<CreditCardOutlined />}
-            onClick={() => setIsAddPagoOpen(true) }
+            onClick={() => setIsAddPagoOpen(true)}
             type="primary"
             disabled={!negocioSeleccionado}
           >
             Agregar Pago
           </Button>
-
           <Button
             icon={<PlusOutlined />}
-            // onClick={() => setFilterDrawerVisible(true)}
+            onClick={() => setIsAddNotaCreditoOpen(true)}
             type="primary"
             disabled={!negocioSeleccionado}
           >
             Agregar Nota de Crédito
           </Button>
         </div>
-      )}
-      
+      </div>
+
 
       {/* Botón de filtro para móviles */}
       {isMobile && (
@@ -552,22 +573,27 @@ const handleAgregarPago = async () => {
           </Button>
         </div>
       )}
-
+      
       {/* Tabla de transacciones */}
-      <div className="overflow-x-auto">
-        <Table
-          dataSource={transacciones}
-          columns={getColumns()}
-          rowKey={(record) => `${record.tipo}-${record.id}`}
-          pagination={{
-            pageSize: isMobile ? 5 : 10,
-            size: isMobile ? "small" : "default",
-            simple: isMobile,
-          }}
-          size={isMobile || isTablet ? "small" : "middle"}
-          scroll={{ x: isMobile ? 480 : isTablet ? 650 : 950 }}
-          locale={{ emptyText: "No hay datos disponibles" }}
-        />
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Movimientos</h2>
+        </div>
+        <div className="overflow-x-auto px-4 py-4">
+          <Table
+            dataSource={transacciones}
+            columns={getColumns()}
+            rowKey={(record) => `${record.tipo}-${record.id}`}
+            pagination={{
+              pageSize: isMobile ? 5 : 10,
+              size: isMobile ? "small" : "default",
+              simple: isMobile,
+            }}
+            size={isMobile || isTablet ? "small" : "middle"}
+            scroll={{ x: isMobile ? 480 : isTablet ? 650 : 950 }}
+            locale={{ emptyText: "No hay datos disponibles" }}
+          />
+        </div>
       </div>
 
       {/* Modal para ver detalles */}
@@ -596,7 +622,7 @@ const handleAgregarPago = async () => {
       {/* Modal para editar venta */}
       {!isMobile ? (
         <Modal
-          title="Editar monto de venta"
+          title="Editar"
           open={isEditModalOpen}
           onCancel={() => setIsEditModalOpen(false)}
           onOk={guardarEdicionVenta}
@@ -605,7 +631,7 @@ const handleAgregarPago = async () => {
         >
           <div className="space-y-4">
             <p>
-              <strong>Nro Venta:</strong> {editingRecord?.nroVenta}
+              <strong>Numero:</strong> {editingRecord?.nroVenta}
             </p>
             <p>
               <strong>Fecha:</strong>{" "}
@@ -659,38 +685,71 @@ const handleAgregarPago = async () => {
       )}
 
       <Modal
-  title="Agregar Pago/Entrega"
-  open={isAddPagoOpen}
-  onCancel={() => setIsAddPagoOpen(false)}
-  onOk={handleAgregarPago}
+        title="Agregar Pago/Entrega"
+        open={isAddPagoOpen}
+        onCancel={() => setIsAddPagoOpen(false)}
+        onOk={handleAgregarPago}
+        okText="Registrar"
+        confirmLoading={loadingPago}
+      >
+        <div className="space-y-4">
+          <div>
+            <label>Monto</label>
+            <InputNumber
+              value={nuevoMonto}
+              onChange={setNuevoMonto}
+              min={1}
+              style={{ width: "100%" }}
+              placeholder="Monto"
+            />
+          </div>
+          <div>
+            <label>Método de pago</label>
+            <Select
+              value={nuevoMetodoPago}
+              onChange={setNuevoMetodoPago}
+              placeholder="Selecciona método de pago"
+              style={{ width: "100%" }}
+            >
+              {metodosPago.map((m) => (
+                <Option key={m.id} value={m.id}>
+                  {m.nombre}
+                </Option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </Modal>
+
+
+<Modal
+  title="Agregar Nota de Crédito"
+  open={isAddNotaCreditoOpen}
+  onCancel={() => setIsAddNotaCreditoOpen(false)}
+  onOk={handleAgregarNotaCredito}
   okText="Registrar"
-  confirmLoading={loadingPago}
+  confirmLoading={loadingNotaCredito}
 >
   <div className="space-y-4">
     <div>
+      <label>Motivo</label>
+      <Input
+        type="text"
+        className="ant-input"
+        value={motivoNotaCredito}
+        onChange={e => setMotivoNotaCredito(e.target.value)}
+        placeholder="Motivo de la nota de crédito"
+      />
+    </div>
+    <div>
       <label>Monto</label>
       <InputNumber
-        value={nuevoMonto}
-        onChange={setNuevoMonto}
+        value={montoNotaCredito}
+        onChange={setMontoNotaCredito}
         min={1}
         style={{ width: "100%" }}
         placeholder="Monto"
       />
-    </div>
-    <div>
-      <label>Método de pago</label>
-<Select
-  value={nuevoMetodoPago}
-  onChange={setNuevoMetodoPago}
-  placeholder="Selecciona método de pago"
-  style={{ width: "100%" }}
->
-  {metodosPago.map((m) => (
-    <Option key={m.id} value={m.id}>
-      {m.nombre}
-    </Option>
-  ))}
-</Select>
     </div>
   </div>
 </Modal>
@@ -713,12 +772,12 @@ const handleAgregarPago = async () => {
               value={negocioSeleccionado}
             >
               {negocios
-              .filter((n) => n.estado === 1 && n.esCuentaCorriente)
-              .map((n) => (
-                <Option key={n.id} value={n.id}>
-                  {n.nombre}
-                </Option>
-              ))}
+                .filter((n) => n.estado === 1 && n.esCuentaCorriente)
+                .map((n) => (
+                  <Option key={n.id} value={n.id}>
+                    {n.nombre}
+                  </Option>
+                ))}
             </Select>
           </div>
 
@@ -783,7 +842,7 @@ const handleAgregarPago = async () => {
         </div>
       </Drawer>
 
-      
+
 
       {/* Drawer para acciones en móvil */}
       <Drawer
@@ -826,8 +885,9 @@ const handleAgregarPago = async () => {
                 icon={<EditOutlined />}
                 onClick={() => handleEditarVenta(selectedRecord)}
                 style={{ width: "100%" }}
+                disabled={selectedRecord?.tipo === "Nota de Crédito"}
               >
-                Editar venta
+                Editar
               </Button>
 
               <Button

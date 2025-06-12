@@ -334,22 +334,22 @@ const getUltimaEntregaDelDia = async () => {
 const getTotalesEntregasDelDiaPorCaja = async () => {
   try {
     const hoy = new Date();
-    const inicioDelDia = new Date(
-      hoy.getFullYear(),
-      hoy.getMonth(),
-      hoy.getDate()
-    );
-    const finDelDia = new Date(
-      hoy.getFullYear(),
-      hoy.getMonth(),
-      hoy.getDate(),
-      23,
-      59,
-      59,
-      999
-    );
+    const inicioDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const finDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
 
-    // Agrupa y suma por cajaId
+    // 1. Busca las cajas cerradas hoy
+    const cierresHoy = await prisma.cierreCaja.findMany({
+      where: {
+        fecha: {
+          gte: inicioDelDia,
+          lte: finDelDia,
+        },
+      },
+      select: { cajaId: true },
+    });
+    const cajasCerradas = cierresHoy.map(c => c.cajaId);
+
+    // 2. Agrupa y suma por cajaId, excluyendo cajas cerradas
     const resultados = await prisma.entregas.groupBy({
       by: ["cajaId"],
       where: {
@@ -357,6 +357,7 @@ const getTotalesEntregasDelDiaPorCaja = async () => {
           gte: inicioDelDia,
           lte: finDelDia,
         },
+        ...(cajasCerradas.length > 0 && { cajaId: { notIn: cajasCerradas } }),
       },
       _sum: {
         monto: true,
@@ -376,7 +377,6 @@ const getTotalesEntregasDelDiaPorCaja = async () => {
     throw error;
   }
 };
-
 module.exports = {
   getAllEntregas,
   getEntregaById,

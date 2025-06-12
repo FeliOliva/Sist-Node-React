@@ -24,7 +24,7 @@ const verifyToken = (req, res, next) => {
 
 // Generar un token JWT
 const generateToken = (user) => {
-    return jwt.sign(user, JWT_SECRET, { expiresIn: "1h" });
+    return jwt.sign({ id: user.id, usuario: user.usuario }, JWT_SECRET, { expiresIn: "1h" });
 };
 
 module.exports = { verifyToken, generateToken };

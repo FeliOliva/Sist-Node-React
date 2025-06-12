@@ -12,7 +12,9 @@ const getCaja = async (req, res) => {
 
 const crearCierreCaja = async (req, res) => {
   try {
-    const cierre = await cajaModel.crearCierreCaja(req.body);
+    const usuarioId = req.user.id;
+    const data = { ...req.body, usuarioId };
+    const cierre = await cajaModel.crearCierreCaja(data);
     res.status(201).json(cierre);
   } catch (error) {
     res.status(500).json({ error: "Error al crear cierre de caja" });
@@ -28,8 +30,20 @@ const getCierresCaja = async (req, res) => {
   }
 };
 
+const cerrarCierreCajaPendiente = async (req, res) => {
+  try {
+    const cierreId = parseInt(req.params.id);
+    const usuarioId = req.user.id;
+    const cierre = await cajaModel.cerrarCierreCajaPendiente(cierreId, usuarioId);
+    res.json(cierre);
+  } catch (error) {
+    res.status(500).json({ error: "Error al cerrar cierre pendiente" });
+  }
+};
+
 module.exports = {
   getCaja,
   crearCierreCaja,
   getCierresCaja,
+  cerrarCierreCajaPendiente,
 };
