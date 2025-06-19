@@ -405,11 +405,6 @@ const Ventas = () => {
       message.success(
         ventaEditando ? "Venta editada con éxito" : "Venta guardada con éxito"
       );
-      alert(
-        ventaEditando
-          ? "¡Venta editada exitosamente!"
-          : "¡Venta guardada exitosamente!"
-      );
 
       setModalVisible(false);
       setVentaEditando(null);
