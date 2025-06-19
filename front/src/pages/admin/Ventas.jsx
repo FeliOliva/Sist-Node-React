@@ -386,6 +386,8 @@ const Ventas = () => {
         productoId: parseInt(producto.id),
       }));
 
+      const usuarioId = parseInt(sessionStorage.getItem("usuarioId"));
+
       const rolUsuario = parseInt(sessionStorage.getItem("rol") || "0");
 
       const ventaData = {
@@ -394,6 +396,7 @@ const Ventas = () => {
         negocioId: parseInt(selectedNegocio),
         cajaId: parseInt(selectedCaja),
         rol_usuario: rolUsuario,
+        usuarioId,
         detalles,
       };
 
@@ -768,7 +771,7 @@ const Ventas = () => {
           setVentaEditando(null);
           setProductosSeleccionados([]);
           setSelectedNegocio(null);
-          setEsVentaCuentaCorriente(false); // limpiar
+          // setEsVentaCuentaCorriente(false); // limpiar
         }}
         footer={[
           <Button key="cancelar" onClick={() => setModalVisible(false)}>

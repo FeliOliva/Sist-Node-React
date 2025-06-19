@@ -71,6 +71,8 @@ model Usuario {
   cajaId        Int?
   caja          Caja?        @relation(fields: [cajaId], references: [id])
   CierreCaja    CierreCaja[]
+
+  Venta Venta[]
 }
 
 model Producto {
@@ -107,6 +109,8 @@ model Venta {
   fechaCreacion  DateTime       @default(now())
   negocioId      Int
   cajaId         Int?
+  usuarioId      Int?
+  usuario        Usuario?      @relation(fields: [usuarioId], references: [id])
   negocio        Negocio        @relation(fields: [negocioId], references: [id])
   caja           Caja?          @relation(fields: [cajaId], references: [id])
   detalles       DetalleVenta[]

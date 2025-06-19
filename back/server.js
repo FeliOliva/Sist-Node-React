@@ -71,6 +71,7 @@ app.post("/login", async (req, res) => {
       rol: user.rol,
       cajaId: user.cajaId,
       userName: user.usuario,
+      usuarioId: user.id,
     });
   } catch (error) {
     console.error("Error al autenticar:", error);

@@ -64,7 +64,8 @@ const MainLayout = () => {
     const userRole = Number(sessionStorage.getItem("rol"));
     const isAdmin = userRole === 0;
     const isManager = userRole === 1;
-    const isDelivery = userRole >= 2;
+    const isEncargadoVentas = userRole === 3;
+    const isDelivery = userRole >= 2 && userRole !== 3;
 
     return (
       <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]}>
@@ -112,6 +113,31 @@ const MainLayout = () => {
             </Menu.Item>
           </>
         )}
+
+         {isEncargadoVentas && (
+        <>
+          <Menu.Item key="/ventas" icon={<DollarOutlined />}>
+            <Link to="/ventas" onClick={() => isMobile && setMobileDrawerOpen(false)}>
+              Ventas
+            </Link>
+          </Menu.Item>
+          <Menu.Item key="/productos" icon={<ShoppingOutlined />}>
+            <Link to="/productos" onClick={() => isMobile && setMobileDrawerOpen(false)}>
+              Productos
+            </Link>
+          </Menu.Item>
+          <Menu.Item key="/negocios" icon={<ShopOutlined />}>
+            <Link to="/negocios" onClick={() => isMobile && setMobileDrawerOpen(false)}>
+              Negocios
+            </Link>
+          </Menu.Item>
+          <Menu.Item key="/entregas-encargado" icon={<FileTextOutlined />}>
+            <Link to="/entregas-encargado" onClick={() => isMobile && setMobileDrawerOpen(false)}>
+              Entregas
+            </Link>
+          </Menu.Item>
+        </>
+      )}
 
         {isDelivery && (
           <>

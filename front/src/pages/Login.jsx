@@ -28,12 +28,14 @@ const Login = () => {
       sessionStorage.setItem("rol", data.rol);
       sessionStorage.setItem("cajaId", data.cajaId);
       sessionStorage.setItem("userName", data.userName);
+      sessionStorage.setItem("usuarioId", data.usuarioId);
       setTimeout(() => {
         sessionStorage.removeItem("token");
         sessionStorage.removeItem("tokenExpiry");
         sessionStorage.removeItem("rol");
         sessionStorage.removeItem("cajaId");
         sessionStorage.removeItem("userName");
+        sessionStorage.removeItem("usuarioId");
         message.info("Tu sesión ha expirado. Iniciá sesión nuevamente.");
         navigate("/login");
       }, 60 * 60 * 1000);

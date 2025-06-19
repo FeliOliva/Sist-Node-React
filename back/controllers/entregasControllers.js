@@ -211,6 +211,10 @@ const addEntrega = async (req, res) => {
       );
       let estadoSocket = "venta-aplazada";
       actualizarVenta(cajaId, ventaActualizada, estadoSocket);
+      const keys = await redisClient.keys("Ventas:*");
+if (keys.length > 0) {
+  await redisClient.del(keys);
+}
       return res.status(200).json({
         success: true,
         message: "Venta marcada para pago en otro día",
@@ -229,19 +233,21 @@ const addEntrega = async (req, res) => {
 
     let venta = null;
     // Si tiene ID de venta, actualizar su estado
-    if (ventaId) {
-      const resultado = await entregaModel.actualizarVentaPorEntrega(
-        ventaId,
-        monto
-      );
-      venta = resultado.venta;
-      const estadoSocket = resultado.estadoSocket;
+if (ventaId) {
+  const resultado = await entregaModel.actualizarVentaPorEntrega(
+    ventaId,
+    monto
+  );
+  venta = resultado.venta;
+  const estadoSocket = resultado.estadoSocket;
+  actualizarVenta(cajaId, venta, estadoSocket);
 
-      console.log("ventaActualizada", venta);
-      console.log("estadoSocket", estadoSocket);
-
-      actualizarVenta(cajaId, venta, estadoSocket);
-    }
+  // LIMPIA EL CACHE DE VENTAS AQUÍ TAMBIÉN
+  const keys = await redisClient.keys("Ventas:*");
+  if (keys.length > 0) {
+    await redisClient.del(keys);
+  }
+}
 
     // Devolver respuesta exitosa
     return res.status(201).json({

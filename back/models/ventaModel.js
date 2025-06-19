@@ -221,6 +221,7 @@ const addVenta = async (data) => {
           estadoPago: data.estadoPago,
           negocioId: data.negocioId,
           cajaId: data.cajaId || null,
+          usuarioId: data.usuarioId,
         },
       });
 
