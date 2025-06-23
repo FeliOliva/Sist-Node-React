@@ -63,6 +63,12 @@ const Entregas = () => {
   const [confirmEntregaVisible, setConfirmEntregaVisible] = useState(false);
   const [entregaAEntregar, setEntregaAEntregar] = useState(null);
 
+  const [modalCierreVisible, setModalCierreVisible] = useState(false);
+  const [cajaInfo, setCajaInfo] = useState(null);
+  const [cierreLoading, setCierreLoading] = useState(false);
+  const [montoContado, setMontoContado] = useState("");
+  const [cierreNotification, setCierreNotification] = useState(null);
+
   // Configurar WebSocket
   useEffect(() => {
     if (initialized.current) return;
@@ -127,9 +133,8 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `${
-                    detalle.nombreProducto || detalle.producto?.nombre
-                  }`,
+                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre
+                    }`,
                 },
               })),
             }));
@@ -169,9 +174,8 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `${
-                    detalle.nombreProducto || detalle.producto?.nombre
-                  }`,
+                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre
+                    }`,
                 },
               })),
             };
@@ -189,9 +193,8 @@ const Entregas = () => {
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${
-                nuevaVenta.numero
-              } por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${nuevaVenta.numero
+                } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -252,15 +255,73 @@ const Entregas = () => {
     }
   };
 
+  // CAJA
+  const handleAbrirCierreCaja = async () => {
+    setCierreLoading(true);
+    const cajaId = sessionStorage.getItem("cajaId");
+    try {
+      // Trae info de la caja y el total entregado del día
+      const [caja, totales] = await Promise.all([
+        api(`api/caja/${cajaId}`, "GET"),
+        api("api/entregas/totales-dia-caja", "GET"),
+      ]);
+      const totalSistema = totales.find((t) => t.cajaId === Number(cajaId))?.totalEntregado || 0;
+      setCajaInfo({
+        ...caja,
+        totalSistema,
+      });
+      setModalCierreVisible(true);
+    } catch (err) {
+      setCierreNotification({ type: "error", message: "No se pudo cargar la caja" });
+    }
+    setCierreLoading(false);
+  };
+
+const handleCerrarCaja = async () => {
+  setCierreLoading(true);
+  try {
+    await api("api/cierre-caja", "POST", JSON.stringify({
+      cajaId: cajaInfo.id,
+      totalVentas: cajaInfo.totalSistema,
+      totalPagado: parseFloat(montoContado),
+      ingresoLimpio: parseFloat(montoContado) - cajaInfo.totalSistema,
+    }));
+    setCierreNotification({ type: "success", message: "Cierre realizado correctamente" });
+    setModalCierreVisible(false);
+    setMontoContado("");
+    // MENSAJE DE ÉXITO
+    notification.success({
+      message: "Caja cerrada",
+      description: "El cierre de caja se realizó correctamente.",
+      placement: "topRight",
+    });
+  } catch (err) {
+    setCierreNotification({ type: "error", message: "No se pudo cerrar la caja" });
+    // MENSAJE DE ERROR
+    notification.error({
+      message: "Error al cerrar caja",
+      description: "Ocurrió un error al intentar cerrar la caja.",
+      placement: "topRight",
+    });
+  }
+  setCierreLoading(false);
+};
+
+
+
   // Efecto para aplicar el filtro cuando cambia el estado del filtro o las entregas
   useEffect(() => {
     applyFilter(estadoFiltro);
   }, [estadoFiltro, entregas]);
 
+
+  // EntregaCuentaCorriente  
   const handleEntregarCuentaCorriente = (entrega) => {
     setEntregaAEntregar(entrega);
     setConfirmEntregaVisible(true);
   };
+
+  // Confirmar entrega
 
   const handleConfirmEntregar = async () => {
     if (!entregaAEntregar) return;
@@ -276,8 +337,7 @@ const Entregas = () => {
     setEntregaAEntregar(null);
     //entregas/cambiarEstado
     const response = await api(
-      `api/entregas/cambiarEstado?venta_id=${
-        entregaAEntregar.id
+      `api/entregas/cambiarEstado?venta_id=${entregaAEntregar.id
       }&estado=6&caja_id=${sessionStorage.getItem("cajaId")}`,
       "POST"
     );
@@ -289,21 +349,29 @@ const Entregas = () => {
     });
   };
 
+  // Cancelar entrega
+
   const handleCancelEntregar = () => {
     setConfirmEntregaVisible(false);
     setEntregaAEntregar(null);
   };
+
+  // Ver detalles de la entrega
 
   const handleViewDetails = (entrega) => {
     setSelectedEntrega(entrega);
     setDetailsModalVisible(true);
   };
 
+
+  // Cerrar modal de detalles
   const handleCloseDetailsModal = () => {
     setDetailsModalVisible(false);
     setSelectedEntrega(null);
   };
 
+
+  // Abrir modal de pago
   const handleOpenPaymentModal = (entrega) => {
     setSelectedEntrega(entrega);
 
@@ -322,17 +390,23 @@ const Entregas = () => {
     setPaymentModalVisible(true);
   };
 
+
+  // Cerrar modal de pago
   const handleClosePaymentModal = () => {
     setPaymentModalVisible(false);
     form.resetFields();
   };
 
+
+  // Pagar otro día 
   const handlePayLaterChange = (e) => {
     setPayLater(e.target.checked);
     if (e.target.checked) {
       setPaymentAmount("");
     }
   };
+
+
 
   const handleSubmitPayment = async () => {
     try {
@@ -538,7 +612,16 @@ const Entregas = () => {
           <h1 className="text-3xl font-bold text-blue-700 text-center mb-6">
             Entregas Pendientes
           </h1>
+          <Button
+            type="primary"
+            onClick={handleAbrirCierreCaja}
+            className="mb-4 "
+          >
+            Cerrar Caja
+          </Button>
         </div>
+
+        
 
         <div className="flex justify-between items-center mb-4">
           <div className="flex gap-2">
@@ -614,8 +697,8 @@ const Entregas = () => {
                         <span>
                           {entrega.fechaCreacion
                             ? new Date(entrega.fechaCreacion).toLocaleString(
-                                "es-AR"
-                              )
+                              "es-AR"
+                            )
                             : ""}
                         </span>
                       </div>
@@ -652,14 +735,14 @@ const Entregas = () => {
                       {(entrega.estado === 1 ||
                         entrega.estado === 3 ||
                         entrega.estado === 5) && (
-                        <Button
-                          type="primary"
-                          size="small"
-                          onClick={() => handleOpenPaymentModal(entrega)}
-                        >
-                          {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
-                        </Button>
-                      )}
+                          <Button
+                            type="primary"
+                            size="small"
+                            onClick={() => handleOpenPaymentModal(entrega)}
+                          >
+                            {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
+                          </Button>
+                        )}
                       {entrega.estado === 4 && (
                         <Button
                           type="primary"
@@ -690,22 +773,22 @@ const Entregas = () => {
             Cerrar
           </Button>,
           selectedEntrega &&
-            (selectedEntrega.estado === 1 ||
-              selectedEntrega.estado === 3 ||
-              selectedEntrega.estado === 5) && (
-              <Button
-                key="cobrar"
-                type="primary"
-                onClick={() => {
-                  handleCloseDetailsModal();
-                  handleOpenPaymentModal(selectedEntrega);
-                }}
-              >
-                {selectedEntrega.estado === 5
-                  ? "Completar Pago"
-                  : "Cobrar Entrega"}
-              </Button>
-            ),
+          (selectedEntrega.estado === 1 ||
+            selectedEntrega.estado === 3 ||
+            selectedEntrega.estado === 5) && (
+            <Button
+              key="cobrar"
+              type="primary"
+              onClick={() => {
+                handleCloseDetailsModal();
+                handleOpenPaymentModal(selectedEntrega);
+              }}
+            >
+              {selectedEntrega.estado === 5
+                ? "Completar Pago"
+                : "Cobrar Entrega"}
+            </Button>
+          ),
         ]}
         width={600}
       >
@@ -727,8 +810,8 @@ const Entregas = () => {
                   <strong>Fecha:</strong>{" "}
                   {selectedEntrega.fechaCreacion
                     ? new Date(selectedEntrega.fechaCreacion).toLocaleString(
-                        "es-AR"
-                      )
+                      "es-AR"
+                    )
                     : ""}
                 </p>
               </div>
@@ -738,10 +821,10 @@ const Entregas = () => {
                   {selectedEntrega.estado === 5
                     ? "PAGO PARCIAL"
                     : selectedEntrega.estado === 3
-                    ? "PAGO OTRO DÍA"
-                    : selectedEntrega.estado === 2
-                    ? "COBRADA"
-                    : "PENDIENTE"}
+                      ? "PAGO OTRO DÍA"
+                      : selectedEntrega.estado === 2
+                        ? "COBRADA"
+                        : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.estado !== 3 && (
@@ -922,10 +1005,10 @@ const Entregas = () => {
                   payLater
                     ? "Desactive 'Pagar otro día' para ingresar un monto"
                     : selectedEntrega?.estado === 5
-                    ? `Monto pendiente: ${formatMoney(
+                      ? `Monto pendiente: ${formatMoney(
                         selectedEntrega?.resto_pendiente || 0
                       )}`
-                    : ""
+                      : ""
                 }
               >
                 <Input
@@ -933,8 +1016,8 @@ const Entregas = () => {
                   placeholder={
                     selectedEntrega?.estado === 5
                       ? `Ingrese el monto a pagar (Pendiente: ${formatMoney(
-                          selectedEntrega?.resto_pendiente || 0
-                        )})`
+                        selectedEntrega?.resto_pendiente || 0
+                      )})`
                       : "Ingrese el monto recibido"
                   }
                   value={paymentAmount}
@@ -949,6 +1032,56 @@ const Entregas = () => {
           )}
         </Form>
       </Modal>
+      <Modal
+  title="Cierre de Caja"
+  open={modalCierreVisible}
+  onCancel={() => setModalCierreVisible(false)}
+  footer={[
+    <Button key="cancel" onClick={() => setModalCierreVisible(false)}>
+      Cancelar
+    </Button>,
+    <Button
+      key="cerrar"
+      type="primary"
+      loading={cierreLoading}
+      onClick={handleCerrarCaja}
+      disabled={!montoContado || isNaN(parseFloat(montoContado))}
+    >
+      Confirmar Cierre
+    </Button>,
+  ]}
+>
+  {cajaInfo ? (
+    <div>
+      <p><strong>Caja:</strong> {cajaInfo.nombre}</p>
+      <p><strong>Total sistema:</strong> ${cajaInfo.totalSistema?.toLocaleString() || 0}</p>
+      <Form.Item label="Monto contado">
+        <Input
+          type="number"
+          min="0"
+          value={montoContado}
+          onChange={e => setMontoContado(e.target.value)}
+        />
+      </Form.Item>
+      <p>
+        <strong>Diferencia:</strong>{" "}
+        <span style={{ color: (parseFloat(montoContado) - cajaInfo.totalSistema) === 0 ? "green" : "red" }}>
+          ${isNaN(parseFloat(montoContado)) ? 0 : (parseFloat(montoContado) - cajaInfo.totalSistema)}
+        </span>
+      </p>
+    </div>
+  ) : (
+    <Spin />
+  )}
+  {cierreNotification && (
+    <Alert
+      message={cierreNotification.message}
+      type={cierreNotification.type}
+      showIcon
+      className="mt-2"
+    />
+  )}
+</Modal>
     </div>
   );
 };

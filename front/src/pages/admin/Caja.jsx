@@ -52,6 +52,11 @@ const CierreCajaGeneral = () => {
       const nuevasCajas = await api("api/caja", "GET");
       setCajas(nuevasCajas);
       setMontosContados((prev) => ({ ...prev, [caja.id]: 0 }));
+          setTotalesEntregas((prev) =>
+      prev.map((t) =>
+        t.cajaId === caja.id ? { ...t, totalEntregado: 0 } : t
+      )
+    );
     } catch (error) {
       showNotification("error", "Error", "No se pudo realizar el cierre");
     }

@@ -17,12 +17,10 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
-  FilterOutlined,
   PlusOutlined,
-  PrinterFilled,
   PrinterOutlined,
-  CaretDownOutlined,
   CreditCardOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import logo from "../../assets/logo.png";
 
@@ -504,58 +502,86 @@ const VentasPorNegocio = () => {
   return (
    <div className="p-4 max-w-7xl mx-auto">
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-md mb-6">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Resumen por Negocio</h2>
-        </div>
-        <div className="px-4 py-4 flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
-          <Select
-            style={{ width: "100%", maxWidth: 250 }}
-            placeholder="Selecciona un negocio"
-            onChange={setNegocioSeleccionado}
-            value={negocioSeleccionado}
-          >
-            {negocios
-              .filter((n) => n.estado === 1 && n.esCuentaCorriente)
-              .map((n) => (
-                <Option key={n.id} value={n.id}>
-                  {n.nombre}
-                </Option>
-              ))}
-          </Select>
-
-          <RangePicker
-            onChange={handleRangePickerChange}
-            value={[fechaInicio, fechaFin]}
-            style={{ width: "100%", maxWidth: 350 }}
-          />
-
-          <Button type="primary" onClick={handleBuscarTransacciones}>
-            Buscar Movimientos
-          </Button>
-          <Button
-            icon={<PrinterOutlined />}
-            onClick={handleImprimirResumen}
-            type="primary"
-          >
-            Imprimir
-          </Button>
-          <Button
-            icon={<CreditCardOutlined />}
-            onClick={() => setIsAddPagoOpen(true)}
-            type="primary"
-            disabled={!negocioSeleccionado}
-          >
-            Agregar Pago
-          </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => setIsAddNotaCreditoOpen(true)}
-            type="primary"
-            disabled={!negocioSeleccionado}
-          >
-            Agregar Nota de Crédito
-          </Button>
+<div className="bg-white rounded-lg shadow-md mb-6">
+  <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+    <h2 className="text-lg font-semibold text-gray-900">Resumen por Negocio</h2>
+  </div>
+  <div className="px-4 py-4 flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
+{/* SOLO filtros principales en móvil */}
+{isMobile ? (
+  <>
+    <Select
+      style={{ width: "100%", maxWidth: 350 }}
+      placeholder="Selecciona un negocio"
+      onChange={setNegocioSeleccionado}
+      value={negocioSeleccionado}
+      className="mb-2"
+    >
+      {negocios
+        .filter((n) => n.estado === 1 && n.esCuentaCorriente)
+        .map((n) => (
+          <Option key={n.id} value={n.id}>
+            {n.nombre}
+          </Option>
+        ))}
+    </Select>
+    <div className="flex gap-2 w-full mb-2">
+      <DatePicker
+        value={fechaInicio}
+        onChange={(date) => setFechaInicio(date)}
+        style={{ width: "100%" }}
+        format="DD/MM/YYYY"
+        placeholder="Fecha inicial"
+      />
+      <DatePicker
+        value={fechaFin}
+        onChange={(date) => setFechaFin(date)}
+        style={{ width: "100%" }}
+        format="DD/MM/YYYY"
+        placeholder="Fecha final"
+        disabledDate={(current) => fechaInicio && current < fechaInicio}
+      />
+    </div>
+    <div className="flex gap-2 w-full mb-2">
+      <Button
+        type="primary"
+        onClick={handleBuscarTransacciones}
+        className="flex-1"
+      >
+        Buscar Movimientos
+      </Button>
+    </div>
+  </>
+) : (
+  <>
+    <Button type="primary" onClick={handleBuscarTransacciones}>
+      Buscar Movimientos
+    </Button>
+    <Button
+      icon={<PrinterOutlined />}
+      onClick={handleImprimirResumen}
+      type="primary"
+    >
+      Imprimir
+    </Button>
+    <Button
+      icon={<CreditCardOutlined />}
+      onClick={() => setIsAddPagoOpen(true)}
+      type="primary"
+      disabled={!negocioSeleccionado}
+    >
+      Agregar Pago
+    </Button>
+    <Button
+      icon={<PlusOutlined />}
+      onClick={() => setIsAddNotaCreditoOpen(true)}
+      type="primary"
+      disabled={!negocioSeleccionado}
+    >
+      Agregar Nota de Crédito
+    </Button>
+  </>
+)}
         </div>
       </div>
 
@@ -565,11 +591,11 @@ const VentasPorNegocio = () => {
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-medium">Ventas por Negocio</h3>
           <Button
-            icon={<FilterOutlined />}
+            icon={<MenuOutlined />}
             onClick={() => setFilterDrawerVisible(true)}
             type="primary"
           >
-            Filtros
+            Acciones
           </Button>
         </div>
       )}
@@ -756,91 +782,47 @@ const VentasPorNegocio = () => {
 
       {/* Drawer para filtros en móvil - Ahora con DatePicker individuales */}
       <Drawer
-        title="Filtros"
+        title="Acciones"
         placement="bottom"
         onClose={() => setFilterDrawerVisible(false)}
         open={filterDrawerVisible}
         height="70%"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-1 font-medium">Negocio</label>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Selecciona un negocio"
-              onChange={setNegocioSeleccionado}
-              value={negocioSeleccionado}
-            >
-              {negocios
-                .filter((n) => n.estado === 1 && n.esCuentaCorriente)
-                .map((n) => (
-                  <Option key={n.id} value={n.id}>
-                    {n.nombre}
-                  </Option>
-                ))}
-            </Select>
-          </div>
-
-          {/* DatePicker separados para móviles en lugar de RangePicker */}
-          <div>
-            <label className="block mb-1 font-medium">Fecha inicial</label>
-            <DatePicker
-              value={fechaInicio}
-              onChange={(date) => setFechaInicio(date)}
-              style={{ width: "100%" }}
-              format="DD/MM/YYYY"
-              placeholder="Selecciona fecha inicial"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 font-medium">Fecha final</label>
-            <DatePicker
-              value={fechaFin}
-              onChange={(date) => setFechaFin(date)}
-              style={{ width: "100%" }}
-              format="DD/MM/YYYY"
-              placeholder="Selecciona fecha final"
-              disabledDate={(current) => fechaInicio && current < fechaInicio}
-            />
-          </div>
-
-          <Button
-            type="primary"
-            onClick={handleBuscarTransacciones}
-            style={{ width: "100%" }}
-          >
-            Buscar Movimientos
-          </Button>
-          <Button
-            icon={<PrinterFilled />}
-            onClick={handleImprimirResumen}
-            type="primary"
-            style={{ width: "100%" }}
-          >
-            Imprimir Resumen
-          </Button>
-          <Button
-            icon={<CreditCardOutlined />}
-            onClick={() => setIsAddPagoOpen(true)}
-            type="primary"
-            style={{ width: "100%" }}
-            disabled={!negocioSeleccionado}
-          >
-            Agregar Pago
-          </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => setModalVisible(true)}
-            type="primary"
-            style={{ width: "100%" }}
-            disabled={!negocioSeleccionado}
-          >
-            Agregar Nota de Crédito
-          </Button>
-
-        </div>
-      </Drawer>
+        <div className="space-y-2">
+    <Button
+      icon={<PrinterOutlined />}
+      onClick={handleImprimirResumen}
+      type="primary"
+      style={{ width: "100%" }}
+    >
+      Imprimir
+    </Button>
+    <Button
+      icon={<CreditCardOutlined />}
+      onClick={() => {
+        setIsAddPagoOpen(true);
+        setActionDrawerVisible(false);
+      }}
+      type="primary"
+      style={{ width: "100%" }}
+      disabled={!negocioSeleccionado}
+    >
+      Agregar Pago
+    </Button>
+    <Button
+      icon={<PlusOutlined />}
+      onClick={() => {
+        setIsAddNotaCreditoOpen(true);
+        setActionDrawerVisible(false);
+      }}
+      type="primary"
+      style={{ width: "100%" }}
+      disabled={!negocioSeleccionado}
+    >
+      Agregar Nota de Crédito
+    </Button>
+  </div>
+</Drawer>
 
 
 

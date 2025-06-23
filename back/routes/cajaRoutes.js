@@ -7,5 +7,6 @@ router.get("/caja", verifyToken, cajaControllers.getCaja);
 router.post("/cierre-caja", verifyToken, cajaControllers.crearCierreCaja);
 router.get("/cierres-caja", cajaControllers.getCierresCaja);
 router.patch("/cierre-caja/:id/cerrar", verifyToken, cajaControllers.cerrarCierreCajaPendiente);
+router.get("/caja/:id", verifyToken, cajaControllers.getCajaById);
 
 module.exports = router;

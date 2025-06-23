@@ -41,9 +41,24 @@ const cerrarCierreCajaPendiente = async (req, res) => {
   }
 };
 
+
+const getCajaById = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const caja = await cajaModel.getCajaById(id);
+    if (!caja) {
+      return res.status(404).json({ error: "Caja no encontrada" });
+    }
+    res.status(200).json(caja);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener la caja" });
+  }
+};
+
 module.exports = {
   getCaja,
   crearCierreCaja,
   getCierresCaja,
   cerrarCierreCajaPendiente,
+  getCajaById
 };

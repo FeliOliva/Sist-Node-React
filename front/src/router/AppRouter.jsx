@@ -16,6 +16,7 @@ import Entregas from "../pages/repartidor/Entregas";
 import MainLayout from "../components/layout/Sidebar"; // Ajusta el path si es necesario
 import Caja from "../pages/admin/Caja";
 import EntregaEncargado from "../pages/encargadoVenta/EntregaEncargado";
+import CierreCajaEncargado from "../pages/encargadoVenta/cierreCaja";
 
 const AppRouter = () => {
   const token = sessionStorage.getItem("token");
@@ -77,6 +78,7 @@ const isDelivery = userRole >= 2 && userRole !== 3; // solo para repartidor
                   <Route path="negocios" element={<Negocios />} />
                   <Route path="ventas" element={<Ventas />} />
                   <Route path="entregas-encargado" element={<EntregaEncargado />} />
+                  <Route path="cierre-caja" element={<CierreCajaEncargado />} />
                   <Route path="*" element={<Navigate to="/ventas" />} />
                 </>
               )}

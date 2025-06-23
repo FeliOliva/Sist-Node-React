@@ -96,6 +96,22 @@ const cerrarCierreCajaPendiente = async (cierreId, usuarioId) => {
   }
 };
 
+const getCajaById = async (id) => {
+  try {
+    return await prisma.caja.findUnique({
+      where: { id },
+      include: {
+        ventas: {
+          select: { total: true, estadoPago: true },
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error al obtener la caja:", error);
+    throw new Error("Error al obtener la caja");
+  }
+};
+
 module.exports = {
   // ...otros métodos...
   cerrarCierreCajaPendiente,
@@ -105,6 +121,7 @@ module.exports = {
   getCajas,
   crearCierreCaja,
   getCierresCaja,
+  getCajaById,
   crearCierreCajaPendiente,
   cerrarCierreCajaPendiente,
 };

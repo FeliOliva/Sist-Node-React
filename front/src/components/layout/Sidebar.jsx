@@ -136,6 +136,11 @@ const MainLayout = () => {
               Entregas
             </Link>
           </Menu.Item>
+              <Menu.Item key="/cierre-caja-encargado" icon={<UserOutlined />}>
+      <Link to="/cierre-caja" onClick={() => isMobile && setMobileDrawerOpen(false)}>
+        Cierre de Caja
+      </Link>
+    </Menu.Item>
         </>
       )}
 
