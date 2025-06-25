@@ -79,16 +79,18 @@ const EntregasEncargado = () => {
             const msg = JSON.parse(event.data);
             console.log("Mensaje recibido del WebSocket:", msg);
             if (msg.tipo === "venta-actualizada" ||
-        msg.tipo === "venta-pagada" ||
-        msg.tipo === "venta-aplazada") {
+                msg.tipo === "venta-pagada" ||
+                msg.tipo === "venta-aplazada" ||
+                msg.tipo === "venta-pagada-parcialmente") {
                 setVentas((ventasPrevias) =>
                     ventasPrevias.map((v) =>
                         v.id === msg.data.id
                             ? {
                                 ...v,
                                 ...msg.data,
-                negocioNombre: msg.data.negocio?.nombre ?? v.negocioNombre ?? "",
-                cajaNombre: msg.data.caja?.nombre ?? v.cajaNombre ?? "",
+                                negocioNombre: msg.data.negocio?.nombre ?? v.negocioNombre ?? "",
+                                cajaNombre: msg.data.caja?.nombre ?? v.cajaNombre ?? "",
+                                restoPendiente: msg.data.restoPendiente, // <-- agrega esto
                             }
                             : v
                     )
@@ -170,7 +172,14 @@ const EntregasEncargado = () => {
             setVentaSeleccionada(null);
             // No recargues ventas aquí, el WebSocket lo hará automáticamente
         } catch (error) {
-            setPaymentError("Error al registrar la entrega");
+            let msg = "Error al registrar la entrega";
+            if (error?.response && error.response.data?.message) {
+                msg = error.response.data.message;
+            } else if (error?.message) {
+                msg = error.message;
+            }
+            setPaymentError(msg);
+            message.error(msg);
         } finally {
             setProcessingPayment(false);
         }
@@ -207,23 +216,23 @@ const EntregasEncargado = () => {
                     <Tag color="red">PENDIENTE</Tag>
                 ),
         },
-{
-    title: "Acción",
-    key: "accion",
-    render: (_, record) => (
-        <Button
-            type="primary"
-            onClick={() => handleCobrar(record)}
-            disabled={
-                record.estadoPago === 2 ||
-                record.cajaNombre?.toLowerCase() === "repartidor" ||
-                record.usuarioId !== userId // Solo puede cobrar sus propias ventas
-            }
-        >
-            Cobrar
-        </Button>
-    ),
-},
+        {
+            title: "Acción",
+            key: "accion",
+            render: (_, record) => (
+                <Button
+                    type="primary"
+                    onClick={() => handleCobrar(record)}
+                    disabled={
+                        record.estadoPago === 2 ||
+                        record.cajaNombre?.toLowerCase() === "repartidor" ||
+                        record.usuarioId !== userId // Solo puede cobrar sus propias ventas
+                    }
+                >
+                    Cobrar
+                </Button>
+            ),
+        },
     ];
 
     return (

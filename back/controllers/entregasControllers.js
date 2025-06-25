@@ -195,13 +195,24 @@ const getEntregasByNegocio = async (req, res) => {
 
 const addEntrega = async (req, res) => {
   try {
-    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } =
-      req.body;
+    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } = req.body;
     if ((!monto && !pagoOtroDia) || !cajaId || !negocioId) {
       return res.status(400).json({
         success: false,
         message: "Faltan datos requeridos para crear la entrega",
       });
+    }
+
+    // Validar que el monto no supere el saldo pendiente de la venta
+    if (ventaId && !pagoOtroDia) {
+      const venta = await entregaModel.getVentaById(ventaId);
+      const saldoPendiente = venta.total - (venta.totalPagado || 0);
+      if (parseFloat(monto) > saldoPendiente) {
+        return res.status(400).json({
+          success: false,
+          message: `El monto recibido (${monto}) supera el monto a pagar (${saldoPendiente}) de la venta.`,
+        });
+      }
     }
 
     // Si es un pago para otro día, sólo actualizamos la venta

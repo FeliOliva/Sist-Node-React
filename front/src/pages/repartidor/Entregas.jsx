@@ -529,11 +529,19 @@ const handleCerrarCaja = async () => {
         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
       });
     } catch (error) {
-      console.error("Error al procesar el pago:", error);
-      setPaymentError("Error al procesar el pago. Intente nuevamente.");
-    } finally {
-      setProcessingPayment(false);
-    }
+  let msg = "Error al procesar el pago. Intente nuevamente.";
+  if (error?.response && error.response.data?.message) {
+    msg = error.response.data.message;
+  } else if (error?.message) {
+    msg = error.message;
+  }
+  setPaymentError(msg);
+  notification.error({
+    message: "Error al procesar el pago",
+    description: msg,
+  });
+  setProcessingPayment(false); // <-- Agrega esta línea aquí
+}
   };
 
   const formatMoney = (amount) => {

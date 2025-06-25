@@ -53,6 +53,7 @@ const VentasPorNegocio = () => {
   const [motivoNotaCredito, setMotivoNotaCredito] = useState("");
   const [montoNotaCredito, setMontoNotaCredito] = useState(null);
   const [loadingNotaCredito, setLoadingNotaCredito] = useState(false);
+  const [montoWarning, setMontoWarning] = useState("");
   // Detectar el ancho de la pantalla
   useEffect(() => {
     const handleResize = () => {
@@ -94,43 +95,73 @@ const VentasPorNegocio = () => {
     fetchMetodosPago();
   }, []);
 
-  const handleEditarVenta = async (record) => {
+  const handleEditar = async (record) => {
     try {
-      const res = await api(`api/ventas/${record.id}`);
-      setEditingRecord(res);
-      setEditMonto(res.total);
+      let res;
+      if (record.tipo === "Venta") {
+        res = await api(`api/ventas/${record.id}`);
+        setEditingRecord(res);
+        setEditMonto(res.total);
+      } else if (record.tipo === "Entrega") {
+        res = await api(`api/entregas/${record.id}`);
+        setEditingRecord(res);
+        setEditMonto(res.monto);
+      } else if (record.tipo === "Nota de Crédito") {
+        res = await api(`api/notasCredito/${record.id}`);
+        setEditingRecord(res);
+        setEditMonto(res.monto);
+      } else {
+        message.error("Tipo de registro no soportado para edición");
+        return;
+      }
       setIsEditModalOpen(true);
       setActionDrawerVisible(false);
     } catch (err) {
-      message.error("Error al obtener la venta");
+      message.error("Error al obtener el registro para editar");
     }
   };
-
-  const guardarEdicionVenta = async () => {
+  const guardarEdicion = async () => {
     try {
-      await api(`api/ventas/${editingRecord.id}`, "POST", { total: editMonto });
-      message.success("Venta actualizada correctamente");
+      if (editingRecord.tipo === "Venta") {
+        await api(`api/ventas/${editingRecord.id}`, "POST", { total: editMonto });
+      } else if (editingRecord.tipo === "Entrega") {
+        await api(`api/entregas/${editingRecord.id}`, "PUT", { monto: editMonto });
+      } else if (editingRecord.tipo === "Nota de Crédito") {
+        await api(`api/notasCredito/${editingRecord.id}`, "PUT", { monto: editMonto });
+      }
+      message.success("Registro actualizado correctamente");
       setIsEditModalOpen(false);
       obtenerResumen();
     } catch (err) {
-      message.error("Error al actualizar la venta");
+      message.error("Error al actualizar el registro");
     }
   };
 
-  const handleEliminarVenta = async (id) => {
+  const handleEliminar = async (id, tipo) => {
     Modal.confirm({
-      title: "¿Estás seguro que querés eliminar esta venta?",
+      title: "¿Estás seguro que querés eliminar esta " + tipo + "?",
       okText: "Sí, eliminar",
       okType: "danger",
       cancelText: "Cancelar",
       onOk: async () => {
         try {
-          await api(`api/ventas/${id}`, "DELETE");
-          message.success("Venta eliminada correctamente");
+          if (tipo === "Venta") {
+            await api(`api/ventas/${id}`, "DELETE");
+            message.success("Venta eliminada correctamente");
+          } else if (tipo === "Entrega") {
+            await api(`api/entregas/${id}`, "DELETE");
+            message.success("Entrega eliminada correctamente");
+          } else if (tipo === "Nota de Crédito") {
+            await api(`api/notasCredito/${id}`, "DELETE");
+            message.success("Nota de crédito eliminada correctamente");
+          } else {
+            message.error("Tipo de registro no soportado para eliminación");
+            return;
+          }
           obtenerResumen();
           setActionDrawerVisible(false);
         } catch (err) {
-          message.error("Error al eliminar la venta");
+          message.error("Error al eliminar el registro");
         }
       },
     });
@@ -156,7 +187,8 @@ const VentasPorNegocio = () => {
       setNuevoMetodoPago(null);
       obtenerResumen();
     } catch (err) {
-      message.error("Error al registrar el pago");
+      const msg = err?.response?.data?.message || "Error al registrar el pago";
+      message.error(msg);
     } finally {
       setLoadingPago(false);
     }
@@ -417,14 +449,14 @@ const VentasPorNegocio = () => {
               />
               <Button
                 icon={<EditOutlined />}
-                onClick={() => handleEditarVenta(record)}
+                onClick={() => handleEditar(record)}
                 size="small"
                 disabled={record.tipo === "Nota de Crédito"}
               />
               <Button
                 danger
                 icon={<DeleteOutlined />}
-                onClick={() => handleEliminarVenta(record.id)}
+                onClick={() => handleEliminar(record.id, record.tipo)}
                 size="small"
               />
             </div>
@@ -473,13 +505,13 @@ const VentasPorNegocio = () => {
               />
               <Button
                 icon={<EditOutlined />}
-                onClick={() => handleEditarVenta(record)}
+                onClick={() => handleEditar(record)}
                 disabled={record.tipo === "Nota de Crédito"}
               />
               <Button
                 danger
                 icon={<DeleteOutlined />}
-                onClick={() => handleEliminarVenta(record.id)}
+                onClick={() => handleEliminar(record.id, record.tipo)}
               />
             </div>
           ),
@@ -498,90 +530,127 @@ const VentasPorNegocio = () => {
     window.location.reload(); // para recargar el contenido original
   };
 
+
+  // Calcula el saldo pendiente de la venta seleccionada
+  const saldoPendiente = React.useMemo(() => {
+    // Busca la última venta en transacciones
+    const venta = transacciones.find(t => t.tipo === "Venta");
+    if (!venta) return 0;
+    // Suma todas las entregas y notas de crédito
+    const entregas = transacciones.filter(t => t.tipo === "Entrega");
+    const notasCredito = transacciones.filter(t => t.tipo === "Nota de Crédito");
+    const totalPagado = entregas.reduce((sum, e) => sum + (e.monto || 0), 0) +
+      notasCredito.reduce((sum, n) => sum + (n.monto || 0), 0);
+    const totalVenta = venta.total_con_descuento || venta.monto || venta.total || 0;
+    return Math.max(totalVenta - totalPagado, 0);
+  }, [transacciones]);
+
+
   // Renderizado principal
   return (
-   <div className="p-4 max-w-7xl mx-auto">
+    <div className="p-4 max-w-7xl mx-auto">
       {/* Filtros */}
-<div className="bg-white rounded-lg shadow-md mb-6">
-  <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-    <h2 className="text-lg font-semibold text-gray-900">Resumen por Negocio</h2>
-  </div>
-  <div className="px-4 py-4 flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
-{/* SOLO filtros principales en móvil */}
-{isMobile ? (
-  <>
-    <Select
-      style={{ width: "100%", maxWidth: 350 }}
-      placeholder="Selecciona un negocio"
-      onChange={setNegocioSeleccionado}
-      value={negocioSeleccionado}
-      className="mb-2"
-    >
-      {negocios
-        .filter((n) => n.estado === 1 && n.esCuentaCorriente)
-        .map((n) => (
-          <Option key={n.id} value={n.id}>
-            {n.nombre}
-          </Option>
-        ))}
-    </Select>
-    <div className="flex gap-2 w-full mb-2">
-      <DatePicker
-        value={fechaInicio}
-        onChange={(date) => setFechaInicio(date)}
-        style={{ width: "100%" }}
-        format="DD/MM/YYYY"
-        placeholder="Fecha inicial"
-      />
-      <DatePicker
-        value={fechaFin}
-        onChange={(date) => setFechaFin(date)}
-        style={{ width: "100%" }}
-        format="DD/MM/YYYY"
-        placeholder="Fecha final"
-        disabledDate={(current) => fechaInicio && current < fechaInicio}
-      />
-    </div>
-    <div className="flex gap-2 w-full mb-2">
-      <Button
-        type="primary"
-        onClick={handleBuscarTransacciones}
-        className="flex-1"
-      >
-        Buscar Movimientos
-      </Button>
-    </div>
-  </>
-) : (
-  <>
-    <Button type="primary" onClick={handleBuscarTransacciones}>
-      Buscar Movimientos
-    </Button>
-    <Button
-      icon={<PrinterOutlined />}
-      onClick={handleImprimirResumen}
-      type="primary"
-    >
-      Imprimir
-    </Button>
-    <Button
-      icon={<CreditCardOutlined />}
-      onClick={() => setIsAddPagoOpen(true)}
-      type="primary"
-      disabled={!negocioSeleccionado}
-    >
-      Agregar Pago
-    </Button>
-    <Button
-      icon={<PlusOutlined />}
-      onClick={() => setIsAddNotaCreditoOpen(true)}
-      type="primary"
-      disabled={!negocioSeleccionado}
-    >
-      Agregar Nota de Crédito
-    </Button>
-  </>
-)}
+      <div className="bg-white rounded-lg shadow-md mb-6">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Resumen por Negocio</h2>
+        </div>
+        <div className="px-4 py-4 flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4 items-start sm:items-center">
+          {/* SOLO filtros principales en móvil */}
+          {isMobile ? (
+            <>
+              <Select
+                style={{ width: "100%", maxWidth: 350 }}
+                placeholder="Selecciona un negocio"
+                onChange={setNegocioSeleccionado}
+                value={negocioSeleccionado}
+                className="mb-2"
+              >
+                {negocios
+                  .filter((n) => n.estado === 1 && n.esCuentaCorriente)
+                  .map((n) => (
+                    <Option key={n.id} value={n.id}>
+                      {n.nombre}
+                    </Option>
+                  ))}
+              </Select>
+              <div className="flex gap-2 w-full mb-2">
+                <DatePicker
+                  value={fechaInicio}
+                  onChange={(date) => setFechaInicio(date)}
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  placeholder="Fecha inicial"
+                />
+                <DatePicker
+                  value={fechaFin}
+                  onChange={(date) => setFechaFin(date)}
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  placeholder="Fecha final"
+                  disabledDate={(current) => fechaInicio && current < fechaInicio}
+                />
+              </div>
+              <div className="flex gap-2 w-full mb-2">
+                <Button
+                  type="primary"
+                  onClick={handleBuscarTransacciones}
+                  className="flex-1"
+                >
+                  Buscar Movimientos
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Select
+                style={{ width: "100%", maxWidth: 350 }}
+                placeholder="Selecciona un negocio"
+                onChange={setNegocioSeleccionado}
+                value={negocioSeleccionado}
+                className="mb-2"
+              >
+                {negocios
+                  .filter((n) => n.estado === 1 && n.esCuentaCorriente)
+                  .map((n) => (
+                    <Option key={n.id} value={n.id}>
+                      {n.nombre}
+                    </Option>
+                  ))}
+              </Select>
+              <RangePicker
+                onChange={handleRangePickerChange}
+                value={[fechaInicio, fechaFin]}
+                style={{ width: "100%", maxWidth: 350, marginBottom: 8 }}
+                format="DD/MM/YYYY"
+              />
+              <Button type="primary" onClick={handleBuscarTransacciones}>
+                Buscar Movimientos
+              </Button>
+              <Button
+                icon={<PrinterOutlined />}
+                onClick={handleImprimirResumen}
+                type="primary"
+              >
+                Imprimir
+              </Button>
+              <Button
+                icon={<CreditCardOutlined />}
+                onClick={() => setIsAddPagoOpen(true)}
+                type="primary"
+                disabled={!negocioSeleccionado}
+              >
+                Agregar Pago
+              </Button>
+              <Button
+                icon={<PlusOutlined />}
+                onClick={() => setIsAddNotaCreditoOpen(true)}
+                type="primary"
+                disabled={!negocioSeleccionado}
+              >
+                Agregar Nota de Crédito
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -599,7 +668,7 @@ const VentasPorNegocio = () => {
           </Button>
         </div>
       )}
-      
+
       {/* Tabla de transacciones */}
       <div className="bg-white rounded-lg shadow-md mb-6">
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
@@ -651,13 +720,17 @@ const VentasPorNegocio = () => {
           title="Editar"
           open={isEditModalOpen}
           onCancel={() => setIsEditModalOpen(false)}
-          onOk={guardarEdicionVenta}
+          onOk={guardarEdicion}
           okText="Guardar"
           width={isMobile ? "95%" : isTablet ? "80%" : 500}
         >
           <div className="space-y-4">
             <p>
-              <strong>Numero:</strong> {editingRecord?.nroVenta}
+              <strong>Numero:</strong>{" "}
+              {editingRecord?.nroVenta ||
+                editingRecord?.nroEntrega ||
+                editingRecord?.nroNotaCredito ||
+                "-"}
             </p>
             <p>
               <strong>Fecha:</strong>{" "}
@@ -683,7 +756,7 @@ const VentasPorNegocio = () => {
           placement="bottom"
           height="50%"
           extra={
-            <Button type="primary" onClick={guardarEdicionVenta}>
+            <Button type="primary" onClick={guardarEdicion}>
               Guardar
             </Button>
           }
@@ -710,6 +783,8 @@ const VentasPorNegocio = () => {
         </Drawer>
       )}
 
+
+
       <Modal
         title="Agregar Pago/Entrega"
         open={isAddPagoOpen}
@@ -723,11 +798,23 @@ const VentasPorNegocio = () => {
             <label>Monto</label>
             <InputNumber
               value={nuevoMonto}
-              onChange={setNuevoMonto}
+              onChange={value => {
+                if (value > saldoPendiente) {
+                  setMontoWarning(`El monto no puede superar el saldo pendiente ($${saldoPendiente.toLocaleString("es-AR")})`);
+                  // No actualices el valor de nuevoMonto
+                } else {
+                  setNuevoMonto(value);
+                  if (montoWarning) setMontoWarning("");
+                }
+              }}
               min={1}
               style={{ width: "100%" }}
               placeholder="Monto"
+              disabled={saldoPendiente <= 0}
             />
+            {montoWarning && (
+              <div style={{ color: "red", marginTop: 4 }}>{montoWarning}</div>
+            )}
           </div>
           <div>
             <label>Método de pago</label>
@@ -748,37 +835,37 @@ const VentasPorNegocio = () => {
       </Modal>
 
 
-<Modal
-  title="Agregar Nota de Crédito"
-  open={isAddNotaCreditoOpen}
-  onCancel={() => setIsAddNotaCreditoOpen(false)}
-  onOk={handleAgregarNotaCredito}
-  okText="Registrar"
-  confirmLoading={loadingNotaCredito}
->
-  <div className="space-y-4">
-    <div>
-      <label>Motivo</label>
-      <Input
-        type="text"
-        className="ant-input"
-        value={motivoNotaCredito}
-        onChange={e => setMotivoNotaCredito(e.target.value)}
-        placeholder="Motivo de la nota de crédito"
-      />
-    </div>
-    <div>
-      <label>Monto</label>
-      <InputNumber
-        value={montoNotaCredito}
-        onChange={setMontoNotaCredito}
-        min={1}
-        style={{ width: "100%" }}
-        placeholder="Monto"
-      />
-    </div>
-  </div>
-</Modal>
+      <Modal
+        title="Agregar Nota de Crédito"
+        open={isAddNotaCreditoOpen}
+        onCancel={() => setIsAddNotaCreditoOpen(false)}
+        onOk={handleAgregarNotaCredito}
+        okText="Registrar"
+        confirmLoading={loadingNotaCredito}
+      >
+        <div className="space-y-4">
+          <div>
+            <label>Motivo</label>
+            <Input
+              type="text"
+              className="ant-input"
+              value={motivoNotaCredito}
+              onChange={e => setMotivoNotaCredito(e.target.value)}
+              placeholder="Motivo de la nota de crédito"
+            />
+          </div>
+          <div>
+            <label>Monto</label>
+            <InputNumber
+              value={montoNotaCredito}
+              onChange={setMontoNotaCredito}
+              min={1}
+              style={{ width: "100%" }}
+              placeholder="Monto"
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Drawer para filtros en móvil - Ahora con DatePicker individuales */}
       <Drawer
@@ -789,40 +876,40 @@ const VentasPorNegocio = () => {
         height="70%"
       >
         <div className="space-y-2">
-    <Button
-      icon={<PrinterOutlined />}
-      onClick={handleImprimirResumen}
-      type="primary"
-      style={{ width: "100%" }}
-    >
-      Imprimir
-    </Button>
-    <Button
-      icon={<CreditCardOutlined />}
-      onClick={() => {
-        setIsAddPagoOpen(true);
-        setActionDrawerVisible(false);
-      }}
-      type="primary"
-      style={{ width: "100%" }}
-      disabled={!negocioSeleccionado}
-    >
-      Agregar Pago
-    </Button>
-    <Button
-      icon={<PlusOutlined />}
-      onClick={() => {
-        setIsAddNotaCreditoOpen(true);
-        setActionDrawerVisible(false);
-      }}
-      type="primary"
-      style={{ width: "100%" }}
-      disabled={!negocioSeleccionado}
-    >
-      Agregar Nota de Crédito
-    </Button>
-  </div>
-</Drawer>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={handleImprimirResumen}
+            type="primary"
+            style={{ width: "100%" }}
+          >
+            Imprimir
+          </Button>
+          <Button
+            icon={<CreditCardOutlined />}
+            onClick={() => {
+              setIsAddPagoOpen(true);
+              setActionDrawerVisible(false);
+            }}
+            type="primary"
+            style={{ width: "100%" }}
+            disabled={!negocioSeleccionado}
+          >
+            Agregar Pago
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setIsAddNotaCreditoOpen(true);
+              setActionDrawerVisible(false);
+            }}
+            type="primary"
+            style={{ width: "100%" }}
+            disabled={!negocioSeleccionado}
+          >
+            Agregar Nota de Crédito
+          </Button>
+        </div>
+      </Drawer>
 
 
 
@@ -865,7 +952,7 @@ const VentasPorNegocio = () => {
 
               <Button
                 icon={<EditOutlined />}
-                onClick={() => handleEditarVenta(selectedRecord)}
+                onClick={() => handleEditar(selectedRecord)}
                 style={{ width: "100%" }}
                 disabled={selectedRecord?.tipo === "Nota de Crédito"}
               >
@@ -875,10 +962,10 @@ const VentasPorNegocio = () => {
               <Button
                 danger
                 icon={<DeleteOutlined />}
-                onClick={() => handleEliminarVenta(selectedRecord.id)}
+                onClick={() => handleEliminar(selectedRecord.id, selectedRecord.tipo)}
                 style={{ width: "100%" }}
               >
-                Eliminar venta
+                Eliminar {selectedRecord?.tipo?.toLowerCase()}
               </Button>
             </div>
           </div>
