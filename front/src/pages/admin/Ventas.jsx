@@ -33,6 +33,7 @@ import {
   ShopOutlined,
   PrinterOutlined,
   BankOutlined,
+  SolutionOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
@@ -71,20 +72,19 @@ const generarPDF = async (record) => {
       <p><strong>Caja:</strong> ${record.cajaNombre || "No especificada"}</p>
       <p><strong>Total:</strong> $${venta.total.toLocaleString("es-AR")}</p>
       <p><strong>Fecha:</strong> ${dayjs(venta.fechaCreacion).format(
-        "DD/MM/YYYY"
-      )}</p>
+      "DD/MM/YYYY"
+    )}</p>
       <p><strong>Productos:</strong></p>
       <ul>
         ${venta.detalles
-          .map(
-            (d) =>
-              `<li>${d.producto?.nombre || "Producto"} - ${
-                d.cantidad
-              } u. x $${d.precio.toLocaleString("es-AR")} = $${(
-                d.precio * d.cantidad
-              ).toLocaleString("es-AR")}</li>`
-          )
-          .join("")}
+        .map(
+          (d) =>
+            `<li>${d.producto?.nombre || "Producto"} - ${d.cantidad
+            } u. x $${d.precio.toLocaleString("es-AR")} = $${(
+              d.precio * d.cantidad
+            ).toLocaleString("es-AR")}</li>`
+        )
+        .join("")}
       </ul>
     `;
 
@@ -699,7 +699,7 @@ const Ventas = () => {
       : ventas.filter((venta) => String(venta.cajaId) === String(filtroCaja));
 
   return (
-  <div className="p-4 max-w-7xl mx-auto">
+    <div className="p-4 max-w-7xl mx-auto">
       {/* Tarjeta de acciones y filtros */}
       <div className="bg-white rounded-lg shadow-md mb-6">
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -810,18 +810,32 @@ const Ventas = () => {
               <Col span={isMobile ? 24 : 12}>
                 <Form.Item label="Negocio" style={{ marginBottom: 0 }}>
                   <Select
-                    placeholder="Seleccionar negocio"
+                    showSearch
+                    placeholder="Buscar y seleccionar negocio"
                     value={selectedNegocio}
                     onChange={(val) => setSelectedNegocio(val)}
                     disabled={!negocios.length}
                     style={{ width: "100%" }}
                     size={isMobile ? "middle" : "large"}
                     suffixIcon={<ShopOutlined />}
+                    optionFilterProp="label"
+                    filterOption={(input, option) =>
+                      option?.label?.toLowerCase().includes(input.toLowerCase())
+                    }
                   >
                     {negocios
                       .filter((negocio) => negocio.estado === 1)
                       .map((negocio) => (
-                        <Option key={negocio.id} value={negocio.id}>
+                        <Option
+                          key={negocio.id}
+                          value={negocio.id}
+                          label={negocio.nombre}
+                        >
+                          {negocio.esCuentaCorriente && (
+                            <span style={{ color: "#faad14", marginRight: 6 }}>
+                              <SolutionOutlined />
+                            </span>
+                          )}
                           {negocio.nombre}
                         </Option>
                       ))}
