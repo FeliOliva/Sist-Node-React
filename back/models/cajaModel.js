@@ -13,10 +13,10 @@ const getCajas = async () => {
     });
 
     // Calcula el total solo de ventas cobradas (estadoPago === 2)
-    return cajas.map(caja => ({
+    return cajas.map((caja) => ({
       ...caja,
       totalVentas: caja.ventas
-        .filter(v => v.estadoPago === 2)
+        .filter((v) => v.estadoPago === 2)
         .reduce((acc, v) => acc + v.total, 0),
     }));
   } catch (error) {
@@ -37,7 +37,18 @@ const crearCierreCaja = async (data) => {
         totalCuentaCorriente: data.totalCuentaCorriente || 0,
         totalDiferido: data.totalDiferido || 0,
         ingresoLimpio: data.ingresoLimpio || 0,
-        estado: "cerrado",
+        estado: data.estado || 0, // ← se pasa manualmente, default 0 si falta
+
+        CierreCajaMetodoPago: {
+          create:
+            data.metodosPago?.map((metodo) => ({
+              metodoPago: metodo.nombre,
+              total: metodo.total,
+            })) || [],
+        },
+      },
+      include: {
+        CierreCajaMetodoPago: true,
       },
     });
   } catch (error) {
@@ -46,12 +57,25 @@ const crearCierreCaja = async (data) => {
   }
 };
 
+const getDetalleMetodosPorCierre = async (cierreId) => {
+  try {
+    return await prisma.cierreCajaMetodoPago.findMany({
+      where: { cierreCajaId: cierreId },
+    });
+  } catch (error) {
+    console.error("Error al obtener métodos de pago del cierre:", error);
+    throw new Error("Error al obtener detalle de métodos de pago");
+  }
+};
+
 const getCierresCaja = async () => {
   try {
     return await prisma.cierreCaja.findMany({
-      include: { usuario: { select: { usuario: true } }, caja: { select: { nombre: true } } },
+      include: {
+        usuario: { select: { usuario: true } },
+        caja: { select: { nombre: true } },
+      },
       orderBy: { fecha: "desc" },
-
     });
   } catch (error) {
     console.error("Error al obtener cierres de caja:", error);
@@ -71,7 +95,7 @@ const crearCierreCajaPendiente = async (cajaId, totalVentas = 0) => {
         totalCuentaCorriente: 0,
         totalDiferido: 0,
         ingresoLimpio: 0,
-        estado: "pendiente"
+        estado: "pendiente",
       },
     });
   } catch (error) {
@@ -112,9 +136,31 @@ const getCajaById = async (id) => {
   }
 };
 
-module.exports = {
-  // ...otros métodos...
-  cerrarCierreCajaPendiente,
+const editarCierreCaja = async (cierreId, totalPagado) => {
+  try {
+    const cierre = await prisma.cierreCaja.findUnique({
+      where: { id: cierreId },
+    });
+
+    if (!cierre) {
+      throw new Error("Cierre no encontrado");
+    }
+
+    const nuevoIngresoLimpio = totalPagado - cierre.totalVentas;
+
+    const cierreActualizado = await prisma.cierreCaja.update({
+      where: { id: cierreId },
+      data: {
+        totalPagado,
+        ingresoLimpio: nuevoIngresoLimpio,
+      },
+    });
+
+    return cierreActualizado;
+  } catch (error) {
+    console.error("Error al editar cierre de caja:", error);
+    throw new Error("Error al editar cierre de caja");
+  }
 };
 
 module.exports = {
@@ -124,4 +170,6 @@ module.exports = {
   getCajaById,
   crearCierreCajaPendiente,
   cerrarCierreCajaPendiente,
+  getDetalleMetodosPorCierre,
+  editarCierreCaja,
 };

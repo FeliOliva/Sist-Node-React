@@ -332,51 +332,79 @@ const getUltimaEntregaDelDia = async () => {
 };
 
 const getTotalesEntregasDelDiaPorCaja = async () => {
-  try {
-    const hoy = new Date();
-    const inicioDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    const finDelDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59, 999);
+  const hoy = new Date();
+  const inicioDelDia = new Date(
+    hoy.getFullYear(),
+    hoy.getMonth(),
+    hoy.getDate()
+  );
+  const finDelDia = new Date(
+    hoy.getFullYear(),
+    hoy.getMonth(),
+    hoy.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
 
-    // 1. Busca las cajas cerradas hoy
-    const cierresHoy = await prisma.cierreCaja.findMany({
-      where: {
-        fecha: {
-          gte: inicioDelDia,
-          lte: finDelDia,
-        },
+  // 1. Cajas cerradas hoy
+  const cierresHoy = await prisma.cierreCaja.findMany({
+    where: {
+      fecha: {
+        gte: inicioDelDia,
+        lte: finDelDia,
       },
-      select: { cajaId: true },
+    },
+    select: { cajaId: true },
+  });
+  const cajasCerradas = cierresHoy.map((c) => c.cajaId);
+
+  // 2. Traer entregas agrupadas por cajaId y metodoPagoId
+  const agrupadas = await prisma.entregas.groupBy({
+    by: ["cajaId", "metodoPagoId"],
+    where: {
+      fechaCreacion: {
+        gte: inicioDelDia,
+        lte: finDelDia,
+      },
+      ...(cajasCerradas.length > 0 && { cajaId: { notIn: cajasCerradas } }),
+    },
+    _sum: {
+      monto: true,
+    },
+  });
+
+  // 3. Traer los nombres de métodos de pago
+  const metodos = await prisma.metodoPago.findMany({
+    select: { id: true, nombre: true },
+  });
+
+  // 4. Mapear y agrupar por cajaId
+  const cajasMap = {};
+
+  agrupadas.forEach((registro) => {
+    const { cajaId, metodoPagoId, _sum } = registro;
+    const metodo = metodos.find((m) => m.id === metodoPagoId);
+    if (!cajasMap[cajaId]) {
+      cajasMap[cajaId] = {
+        cajaId,
+        totalEntregado: 0,
+        metodosPago: [],
+      };
+    }
+    cajasMap[cajaId].totalEntregado += _sum.monto || 0;
+    cajasMap[cajaId].metodosPago.push({
+      metodoPagoId,
+      nombre: metodo?.nombre || `Método ${metodoPagoId}`,
+      total: _sum.monto || 0,
     });
-    const cajasCerradas = cierresHoy.map(c => c.cajaId);
+  });
 
-    // 2. Agrupa y suma por cajaId, excluyendo cajas cerradas
-    const resultados = await prisma.entregas.groupBy({
-      by: ["cajaId"],
-      where: {
-        fechaCreacion: {
-          gte: inicioDelDia,
-          lte: finDelDia,
-        },
-        ...(cajasCerradas.length > 0 && { cajaId: { notIn: cajasCerradas } }),
-      },
-      _sum: {
-        monto: true,
-      },
-    });
-
-    // Devuelve un array de objetos { cajaId, totalEntregado }
-    return resultados.map((r) => ({
-      cajaId: r.cajaId,
-      totalEntregado: r._sum.monto || 0,
-    }));
-  } catch (error) {
-    console.error(
-      "Error al obtener totales de entregas del día por caja:",
-      error
-    );
-    throw error;
-  }
+  // 5. Convertir a array
+  return Object.values(cajasMap);
 };
+
 module.exports = {
   getAllEntregas,
   getEntregaById,

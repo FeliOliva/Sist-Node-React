@@ -20,6 +20,35 @@ const crearCierreCaja = async (req, res) => {
     res.status(500).json({ error: "Error al crear cierre de caja" });
   }
 };
+const editarCierreCaja = async (req, res) => {
+  try {
+    const cierreId = parseInt(req.params.id);
+    const { totalPagado } = req.body;
+
+    const cierreActualizado = await cajaModel.editarCierreCaja(
+      cierreId,
+      totalPagado
+    );
+
+    res.json(cierreActualizado);
+  } catch (error) {
+    console.error("Error al editar cierre de caja:", error);
+    res.status(500).json({ error: "Error al editar cierre de caja" });
+  }
+};
+
+const getDetalleMetodosPorCierre = async (req, res) => {
+  try {
+    const cierreId = parseInt(req.params.id);
+    const detalle = await cajaModel.getDetalleMetodosPorCierre(cierreId);
+    res.json(detalle);
+  } catch (error) {
+    console.error("Error al obtener métodos de pago del cierre:", error);
+    res
+      .status(500)
+      .json({ error: "Error al obtener detalle de métodos de pago" });
+  }
+};
 
 const getCierresCaja = async (req, res) => {
   try {
@@ -34,13 +63,15 @@ const cerrarCierreCajaPendiente = async (req, res) => {
   try {
     const cierreId = parseInt(req.params.id);
     const usuarioId = req.user.id;
-    const cierre = await cajaModel.cerrarCierreCajaPendiente(cierreId, usuarioId);
+    const cierre = await cajaModel.cerrarCierreCajaPendiente(
+      cierreId,
+      usuarioId
+    );
     res.json(cierre);
   } catch (error) {
     res.status(500).json({ error: "Error al cerrar cierre pendiente" });
   }
 };
-
 
 const getCajaById = async (req, res) => {
   try {
@@ -60,5 +91,7 @@ module.exports = {
   crearCierreCaja,
   getCierresCaja,
   cerrarCierreCajaPendiente,
-  getCajaById
+  getCajaById,
+  getDetalleMetodosPorCierre,
+  editarCierreCaja,
 };

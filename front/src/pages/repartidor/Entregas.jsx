@@ -133,8 +133,9 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre
-                    }`,
+                  nombre: `${
+                    detalle.nombreProducto || detalle.producto?.nombre
+                  }`,
                 },
               })),
             }));
@@ -174,8 +175,9 @@ const Entregas = () => {
                 subTotal: detalle.subTotal,
                 producto: {
                   id: detalle.productoId,
-                  nombre: `${detalle.nombreProducto || detalle.producto?.nombre
-                    }`,
+                  nombre: `${
+                    detalle.nombreProducto || detalle.producto?.nombre
+                  }`,
                 },
               })),
             };
@@ -193,8 +195,9 @@ const Entregas = () => {
             // Mostrar notificación
             notification.open({
               message: "Nueva venta registrada",
-              description: `Se ha registrado una nueva venta #${nuevaVenta.numero
-                } por ${formatMoney(nuevaVenta.monto)}`,
+              description: `Se ha registrado una nueva venta #${
+                nuevaVenta.numero
+              } por ${formatMoney(nuevaVenta.monto)}`,
               icon: <ShoppingCartOutlined style={{ color: "#1890ff" }} />,
               placement: "topRight",
               duration: 5,
@@ -265,57 +268,68 @@ const Entregas = () => {
         api(`api/caja/${cajaId}`, "GET"),
         api("api/entregas/totales-dia-caja", "GET"),
       ]);
-      const totalSistema = totales.find((t) => t.cajaId === Number(cajaId))?.totalEntregado || 0;
+      const totalSistema =
+        totales.find((t) => t.cajaId === Number(cajaId))?.totalEntregado || 0;
       setCajaInfo({
         ...caja,
         totalSistema,
       });
       setModalCierreVisible(true);
     } catch (err) {
-      setCierreNotification({ type: "error", message: "No se pudo cargar la caja" });
+      setCierreNotification({
+        type: "error",
+        message: "No se pudo cargar la caja",
+      });
     }
     setCierreLoading(false);
   };
 
-const handleCerrarCaja = async () => {
-  setCierreLoading(true);
-  try {
-    await api("api/cierre-caja", "POST", JSON.stringify({
-      cajaId: cajaInfo.id,
-      totalVentas: cajaInfo.totalSistema,
-      totalPagado: parseFloat(montoContado),
-      ingresoLimpio: parseFloat(montoContado) - cajaInfo.totalSistema,
-    }));
-    setCierreNotification({ type: "success", message: "Cierre realizado correctamente" });
-    setModalCierreVisible(false);
-    setMontoContado("");
-    // MENSAJE DE ÉXITO
-    notification.success({
-      message: "Caja cerrada",
-      description: "El cierre de caja se realizó correctamente.",
-      placement: "topRight",
-    });
-  } catch (err) {
-    setCierreNotification({ type: "error", message: "No se pudo cerrar la caja" });
-    // MENSAJE DE ERROR
-    notification.error({
-      message: "Error al cerrar caja",
-      description: "Ocurrió un error al intentar cerrar la caja.",
-      placement: "topRight",
-    });
-  }
-  setCierreLoading(false);
-};
-
-
+  const handleCerrarCaja = async () => {
+    setCierreLoading(true);
+    try {
+      await api(
+        "api/cierre-caja",
+        "POST",
+        JSON.stringify({
+          cajaId: cajaInfo.id,
+          totalVentas: cajaInfo.totalSistema,
+          totalPagado: parseFloat(montoContado),
+          ingresoLimpio: parseFloat(montoContado) - cajaInfo.totalSistema,
+        })
+      );
+      setCierreNotification({
+        type: "success",
+        message: "Cierre realizado correctamente",
+      });
+      setModalCierreVisible(false);
+      setMontoContado("");
+      // MENSAJE DE ÉXITO
+      notification.success({
+        message: "Caja cerrada",
+        description: "El cierre de caja se realizó correctamente.",
+        placement: "topRight",
+      });
+    } catch (err) {
+      setCierreNotification({
+        type: "error",
+        message: "No se pudo cerrar la caja",
+      });
+      // MENSAJE DE ERROR
+      notification.error({
+        message: "Error al cerrar caja",
+        description: "Ocurrió un error al intentar cerrar la caja.",
+        placement: "topRight",
+      });
+    }
+    setCierreLoading(false);
+  };
 
   // Efecto para aplicar el filtro cuando cambia el estado del filtro o las entregas
   useEffect(() => {
     applyFilter(estadoFiltro);
   }, [estadoFiltro, entregas]);
 
-
-  // EntregaCuentaCorriente  
+  // EntregaCuentaCorriente
   const handleEntregarCuentaCorriente = (entrega) => {
     setEntregaAEntregar(entrega);
     setConfirmEntregaVisible(true);
@@ -337,7 +351,8 @@ const handleCerrarCaja = async () => {
     setEntregaAEntregar(null);
     //entregas/cambiarEstado
     const response = await api(
-      `api/entregas/cambiarEstado?venta_id=${entregaAEntregar.id
+      `api/entregas/cambiarEstado?venta_id=${
+        entregaAEntregar.id
       }&estado=6&caja_id=${sessionStorage.getItem("cajaId")}`,
       "POST"
     );
@@ -363,13 +378,11 @@ const handleCerrarCaja = async () => {
     setDetailsModalVisible(true);
   };
 
-
   // Cerrar modal de detalles
   const handleCloseDetailsModal = () => {
     setDetailsModalVisible(false);
     setSelectedEntrega(null);
   };
-
 
   // Abrir modal de pago
   const handleOpenPaymentModal = (entrega) => {
@@ -390,23 +403,19 @@ const handleCerrarCaja = async () => {
     setPaymentModalVisible(true);
   };
 
-
   // Cerrar modal de pago
   const handleClosePaymentModal = () => {
     setPaymentModalVisible(false);
     form.resetFields();
   };
 
-
-  // Pagar otro día 
+  // Pagar otro día
   const handlePayLaterChange = (e) => {
     setPayLater(e.target.checked);
     if (e.target.checked) {
       setPaymentAmount("");
     }
   };
-
-
 
   const handleSubmitPayment = async () => {
     try {
@@ -529,19 +538,19 @@ const handleCerrarCaja = async () => {
         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
       });
     } catch (error) {
-  let msg = "Error al procesar el pago. Intente nuevamente.";
-  if (error?.response && error.response.data?.message) {
-    msg = error.response.data.message;
-  } else if (error?.message) {
-    msg = error.message;
-  }
-  setPaymentError(msg);
-  notification.error({
-    message: "Error al procesar el pago",
-    description: msg,
-  });
-  setProcessingPayment(false); // <-- Agrega esta línea aquí
-}
+      let msg = "Error al procesar el pago. Intente nuevamente.";
+      if (error?.response && error.response.data?.message) {
+        msg = error.response.data.message;
+      } else if (error?.message) {
+        msg = error.message;
+      }
+      setPaymentError(msg);
+      notification.error({
+        message: "Error al procesar el pago",
+        description: msg,
+      });
+      setProcessingPayment(false); // <-- Agrega esta línea aquí
+    }
   };
 
   const formatMoney = (amount) => {
@@ -629,8 +638,6 @@ const handleCerrarCaja = async () => {
           </Button>
         </div>
 
-        
-
         <div className="flex justify-between items-center mb-4">
           <div className="flex gap-2">
             <Select
@@ -705,8 +712,8 @@ const handleCerrarCaja = async () => {
                         <span>
                           {entrega.fechaCreacion
                             ? new Date(entrega.fechaCreacion).toLocaleString(
-                              "es-AR"
-                            )
+                                "es-AR"
+                              )
                             : ""}
                         </span>
                       </div>
@@ -743,14 +750,14 @@ const handleCerrarCaja = async () => {
                       {(entrega.estado === 1 ||
                         entrega.estado === 3 ||
                         entrega.estado === 5) && (
-                          <Button
-                            type="primary"
-                            size="small"
-                            onClick={() => handleOpenPaymentModal(entrega)}
-                          >
-                            {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
-                          </Button>
-                        )}
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={() => handleOpenPaymentModal(entrega)}
+                        >
+                          {entrega.estado === 5 ? "Completar Pago" : "Cobrar"}
+                        </Button>
+                      )}
                       {entrega.estado === 4 && (
                         <Button
                           type="primary"
@@ -781,22 +788,22 @@ const handleCerrarCaja = async () => {
             Cerrar
           </Button>,
           selectedEntrega &&
-          (selectedEntrega.estado === 1 ||
-            selectedEntrega.estado === 3 ||
-            selectedEntrega.estado === 5) && (
-            <Button
-              key="cobrar"
-              type="primary"
-              onClick={() => {
-                handleCloseDetailsModal();
-                handleOpenPaymentModal(selectedEntrega);
-              }}
-            >
-              {selectedEntrega.estado === 5
-                ? "Completar Pago"
-                : "Cobrar Entrega"}
-            </Button>
-          ),
+            (selectedEntrega.estado === 1 ||
+              selectedEntrega.estado === 3 ||
+              selectedEntrega.estado === 5) && (
+              <Button
+                key="cobrar"
+                type="primary"
+                onClick={() => {
+                  handleCloseDetailsModal();
+                  handleOpenPaymentModal(selectedEntrega);
+                }}
+              >
+                {selectedEntrega.estado === 5
+                  ? "Completar Pago"
+                  : "Cobrar Entrega"}
+              </Button>
+            ),
         ]}
         width={600}
       >
@@ -818,8 +825,8 @@ const handleCerrarCaja = async () => {
                   <strong>Fecha:</strong>{" "}
                   {selectedEntrega.fechaCreacion
                     ? new Date(selectedEntrega.fechaCreacion).toLocaleString(
-                      "es-AR"
-                    )
+                        "es-AR"
+                      )
                     : ""}
                 </p>
               </div>
@@ -829,10 +836,10 @@ const handleCerrarCaja = async () => {
                   {selectedEntrega.estado === 5
                     ? "PAGO PARCIAL"
                     : selectedEntrega.estado === 3
-                      ? "PAGO OTRO DÍA"
-                      : selectedEntrega.estado === 2
-                        ? "COBRADA"
-                        : "PENDIENTE"}
+                    ? "PAGO OTRO DÍA"
+                    : selectedEntrega.estado === 2
+                    ? "COBRADA"
+                    : "PENDIENTE"}
                 </p>
                 {selectedEntrega.metodo_pago &&
                   selectedEntrega.estado !== 3 && (
@@ -1013,10 +1020,10 @@ const handleCerrarCaja = async () => {
                   payLater
                     ? "Desactive 'Pagar otro día' para ingresar un monto"
                     : selectedEntrega?.estado === 5
-                      ? `Monto pendiente: ${formatMoney(
+                    ? `Monto pendiente: ${formatMoney(
                         selectedEntrega?.resto_pendiente || 0
                       )}`
-                      : ""
+                    : ""
                 }
               >
                 <Input
@@ -1024,8 +1031,8 @@ const handleCerrarCaja = async () => {
                   placeholder={
                     selectedEntrega?.estado === 5
                       ? `Ingrese el monto a pagar (Pendiente: ${formatMoney(
-                        selectedEntrega?.resto_pendiente || 0
-                      )})`
+                          selectedEntrega?.resto_pendiente || 0
+                        )})`
                       : "Ingrese el monto recibido"
                   }
                   value={paymentAmount}
@@ -1041,55 +1048,70 @@ const handleCerrarCaja = async () => {
         </Form>
       </Modal>
       <Modal
-  title="Cierre de Caja"
-  open={modalCierreVisible}
-  onCancel={() => setModalCierreVisible(false)}
-  footer={[
-    <Button key="cancel" onClick={() => setModalCierreVisible(false)}>
-      Cancelar
-    </Button>,
-    <Button
-      key="cerrar"
-      type="primary"
-      loading={cierreLoading}
-      onClick={handleCerrarCaja}
-      disabled={!montoContado || isNaN(parseFloat(montoContado))}
-    >
-      Confirmar Cierre
-    </Button>,
-  ]}
->
-  {cajaInfo ? (
-    <div>
-      <p><strong>Caja:</strong> {cajaInfo.nombre}</p>
-      <p><strong>Total sistema:</strong> ${cajaInfo.totalSistema?.toLocaleString() || 0}</p>
-      <Form.Item label="Monto contado">
-        <Input
-          type="number"
-          min="0"
-          value={montoContado}
-          onChange={e => setMontoContado(e.target.value)}
-        />
-      </Form.Item>
-      <p>
-        <strong>Diferencia:</strong>{" "}
-        <span style={{ color: (parseFloat(montoContado) - cajaInfo.totalSistema) === 0 ? "green" : "red" }}>
-          ${isNaN(parseFloat(montoContado)) ? 0 : (parseFloat(montoContado) - cajaInfo.totalSistema)}
-        </span>
-      </p>
-    </div>
-  ) : (
-    <Spin />
-  )}
-  {cierreNotification && (
-    <Alert
-      message={cierreNotification.message}
-      type={cierreNotification.type}
-      showIcon
-      className="mt-2"
-    />
-  )}
-</Modal>
+        title="Cierre de Caja"
+        open={modalCierreVisible}
+        onCancel={() => setModalCierreVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setModalCierreVisible(false)}>
+            Cancelar
+          </Button>,
+          <Button
+            key="cerrar"
+            type="primary"
+            loading={cierreLoading}
+            onClick={handleCerrarCaja}
+            disabled={!montoContado || isNaN(parseFloat(montoContado))}
+          >
+            Confirmar Cierre
+          </Button>,
+        ]}
+      >
+        {cajaInfo ? (
+          <div>
+            <p>
+              <strong>Caja:</strong> {cajaInfo.nombre}
+            </p>
+            <p>
+              <strong>Total sistema:</strong> $
+              {cajaInfo.totalSistema?.toLocaleString() || 0}
+            </p>
+            <Form.Item label="Monto contado">
+              <Input
+                type="number"
+                min="0"
+                value={montoContado}
+                onChange={(e) => setMontoContado(e.target.value)}
+              />
+            </Form.Item>
+            <p>
+              <strong>Diferencia:</strong>{" "}
+              <span
+                style={{
+                  color:
+                    parseFloat(montoContado) - cajaInfo.totalSistema === 0
+                      ? "green"
+                      : "red",
+                }}
+              >
+                $
+                {isNaN(parseFloat(montoContado))
+                  ? 0
+                  : parseFloat(montoContado) - cajaInfo.totalSistema}
+              </span>
+            </p>
+          </div>
+        ) : (
+          <Spin />
+        )}
+        {cierreNotification && (
+          <Alert
+            message={cierreNotification.message}
+            type={cierreNotification.type}
+            showIcon
+            className="mt-2"
+          />
+        )}
+      </Modal>
     </div>
   );
 };
