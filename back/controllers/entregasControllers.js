@@ -1,5 +1,4 @@
 const entregaModel = require("../models/entregaModel");
-const { redisClient } = require("../db");
 const { actualizarVenta } = require("../websocket");
 
 const generarNroEntrega = async () => {
@@ -40,22 +39,6 @@ const generarNroEntrega = async () => {
   }
 };
 
-const clearEntregaCache = async () => {
-  try {
-    const keys = await redisClient.keys("Entregas:*");
-    const clientKeys = await redisClient.keys("EntregasCliente:*");
-    const negocioKeys = await redisClient.keys("EntregasNegocio:*");
-
-    const allKeys = [...keys, ...clientKeys, ...negocioKeys];
-
-    if (allKeys.length > 0) {
-      await redisClient.del(allKeys);
-    }
-  } catch (error) {
-    console.error("Error al limpiar la caché de entregas:", error);
-  }
-};
-
 const getEntregas = async (req, res) => {
   try {
     const { page, limit } = req.query;
@@ -72,20 +55,10 @@ const getEntregas = async (req, res) => {
         .status(400)
         .json({ error: "Parámetros de paginación no válidos" });
     }
-
-    const cacheKey = `Entregas:${limitNumber}:${pageNumber}`;
-    const cachedData = await redisClient.get(cacheKey);
-
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
-
     const entregasData = await entregaModel.getAllEntregas(
       limitNumber,
       pageNumber
     );
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(entregasData));
-
     res.json(entregasData);
   } catch (error) {
     console.error("Error al obtener las entregas:", error);
@@ -109,12 +82,6 @@ const cambiarEstadoVenta = async (req, res) => {
 
     const estadoSocket = "venta-actualizada";
     actualizarVenta(caja_id, ventaActualizada, estadoSocket);
-
-    const keys = await redisClient.keys("Ventas:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
-    await clearEntregaCache();
 
     res.json({
       message: "Estado de la venta actualizado",
@@ -167,15 +134,6 @@ const getEntregasByNegocio = async (req, res) => {
       filterEndDate.setHours(23, 59, 59, 999);
     }
 
-    const cacheKey = `EntregasNegocio:${negocioId}:${startDate || ""}:${
-      endDate || ""
-    }:${cajaId || ""}:${pageNumber}:${limitNumber}`;
-    const cachedData = await redisClient.get(cacheKey);
-
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
-
     const entregasData = await entregaModel.getEntregasByNegocio(
       negocioId,
       limitNumber,
@@ -184,7 +142,6 @@ const getEntregasByNegocio = async (req, res) => {
       filterEndDate,
       cajaId
     );
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(entregasData));
 
     res.json(entregasData);
   } catch (error) {
@@ -195,7 +152,8 @@ const getEntregasByNegocio = async (req, res) => {
 
 const addEntrega = async (req, res) => {
   try {
-    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } = req.body;
+    const { monto, metodoPagoId, cajaId, negocioId, ventaId, pagoOtroDia } =
+      req.body;
     if ((!monto && !pagoOtroDia) || !cajaId || !negocioId) {
       return res.status(400).json({
         success: false,
@@ -222,10 +180,7 @@ const addEntrega = async (req, res) => {
       );
       let estadoSocket = "venta-aplazada";
       actualizarVenta(cajaId, ventaActualizada, estadoSocket);
-      const keys = await redisClient.keys("Ventas:*");
-if (keys.length > 0) {
-  await redisClient.del(keys);
-}
+
       return res.status(200).json({
         success: true,
         message: "Venta marcada para pago en otro día",
@@ -244,21 +199,15 @@ if (keys.length > 0) {
 
     let venta = null;
     // Si tiene ID de venta, actualizar su estado
-if (ventaId) {
-  const resultado = await entregaModel.actualizarVentaPorEntrega(
-    ventaId,
-    monto
-  );
-  venta = resultado.venta;
-  const estadoSocket = resultado.estadoSocket;
-  actualizarVenta(cajaId, venta, estadoSocket);
-
-  // LIMPIA EL CACHE DE VENTAS AQUÍ TAMBIÉN
-  const keys = await redisClient.keys("Ventas:*");
-  if (keys.length > 0) {
-    await redisClient.del(keys);
-  }
-}
+    if (ventaId) {
+      const resultado = await entregaModel.actualizarVentaPorEntrega(
+        ventaId,
+        monto
+      );
+      venta = resultado.venta;
+      const estadoSocket = resultado.estadoSocket;
+      actualizarVenta(cajaId, venta, estadoSocket);
+    }
 
     // Devolver respuesta exitosa
     return res.status(201).json({

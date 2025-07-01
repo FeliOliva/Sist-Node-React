@@ -1,5 +1,4 @@
 const productsModel = require("../models/productModel");
-const { redisClient } = require("../db");
 
 
 const getAllProducts = async (req, res) => {
@@ -21,19 +20,7 @@ const getProducts = async (req, res) => {
             return res.status(400).json({ error: "Los parámetros de paginación no son válidos" });
         }
 
-        const cacheKey = `Productos:${limitNumber}:${pageNumber}`;
-
-        //Verificar si los datos están en caché
-        const cachedData = await redisClient.get(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(JSON.parse(cachedData)); // Retorna la caché
-        }
-
-        //Consultar la base de datos con Prisma
         const productsData = await productsModel.getProducts(limitNumber, pageNumber);
-
-        //Guardar en Redis con expiración de 10 minutos
-        await redisClient.setEx(cacheKey, 600, JSON.stringify(productsData));
 
         res.status(200).json(productsData);
     } catch (error) {
@@ -69,10 +56,7 @@ const addProduct = async (req, res) => {
         if (!nombre || !precio || !precioInicial || !tipoUnidadId) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" })
         }
-        const keys = await redisClient.keys("Productos:*");
-        if (keys.length > 0) {
-            await redisClient.del(keys);
-        }
+
         const newProduct = await productsModel.addProduct({ nombre: nombre.toUpperCase(), precio, precioInicial, tipoUnidadId });
         res.json(newProduct)
     } catch (error) {
@@ -88,11 +72,6 @@ const updateProduct = async (req, res) => {
             return res.status(400).json({ error: "El id es obligatorio" })
         }
         const product = await productsModel.getProductById(id);
-        await redisClient.del(`Productos:${id}`);
-        const keys = await redisClient.keys("Productos:*");
-        if (keys.length > 0) {
-            await redisClient.del(keys);
-        }
         if (product.precio !== precio) {
             const precioAntiguo = product.precio;
             await productsModel.updatePrecio(id, { precioAntiguo, precioNuevo: precio });
@@ -110,10 +89,6 @@ const dropProduct = async (req, res) => {
         if (!id) {
             return res.status(400).json({ error: "El id es obligatorio" })
         }
-        const keys = await redisClient.keys("Productos:*");
-        if (keys.length > 0) {
-            await redisClient.del(keys);
-        }
         const deletedProduct = await productsModel.updateProductStatus(id, 0);
         res.json(deletedProduct);
     } catch (error) {
@@ -126,10 +101,6 @@ const upProduct = async (req, res) => {
         const { id } = req.params;
         if (!id) {
             return res.status(400).json({ error: "El id es obligatorio" })
-        }
-        const keys = await redisClient.keys("Productos:*");
-        if (keys.length > 0) {
-            await redisClient.del(keys);
         }
         const upProduct = await productsModel.updateProductStatus(id, 1);
         res.json(upProduct);

@@ -1,5 +1,4 @@
 const ventaModel = require("../models/ventaModel");
-const { redisClient } = require("../db");
 const { broadcastNuevaVenta, eliminarVenta } = require("../websocket");
 
 const getVentas = async (req, res) => {
@@ -13,17 +12,7 @@ const getVentas = async (req, res) => {
         .status(400)
         .json({ error: "Los parámetros de paginación no son válidos" });
     }
-
-    const cacheKey = `Ventas:${limitNumber}:${pageNumber}`;
-    const cachedData = await redisClient.get(cacheKey);
-
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
-
     const ventasData = await ventaModel.getVentas(limitNumber, pageNumber);
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(ventasData));
-
     res.status(200).json(ventasData);
   } catch (error) {
     console.error("Error al obtener las ventas:", error);
@@ -111,14 +100,6 @@ const getVentasByNegocio = async (req, res) => {
       filterEndDate.setHours(23, 59, 59, 999);
     }
 
-    const cacheKey = `VentasNegocio:${negocioId}:${startDate || ""}:${
-      endDate || ""
-    }:${cajaId || ""}:${pageNumber}:${limitNumber}`;
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
-
     const ventasData = await ventaModel.getVentasByNegocio(
       negocioId,
       limitNumber,
@@ -127,7 +108,6 @@ const getVentasByNegocio = async (req, res) => {
       filterEndDate,
       cajaId
     );
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(ventasData));
 
     res.json(ventasData);
   } catch (error) {
@@ -168,11 +148,6 @@ const addVenta = async (req, res) => {
       0
     );
 
-    // Limpiar caché Redis si corresponde
-    const keys = await redisClient.keys("Ventas:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
 
     // Crear la venta
     const venta = await ventaModel.addVenta({
@@ -204,10 +179,6 @@ const dropVenta = async (req, res) => {
     const { cajaId } = req.query;
     if (!id) {
       return res.status(400).json({ error: "El id es obligatorio" });
-    }
-    const keys = await redisClient.keys("Ventas:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
     }
     eliminarVenta(cajaId, id);
     const ventaData = await ventaModel.dropVenta(id);

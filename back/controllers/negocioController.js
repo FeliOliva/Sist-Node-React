@@ -1,5 +1,4 @@
 const negocioModel = require("../models/negocioModel");
-const { redisClient } = require("../db");
 
 const getNegocios = async (req, res) => {
   try {
@@ -11,18 +10,11 @@ const getNegocios = async (req, res) => {
         .status(400)
         .json({ error: "Los parámetros de paginación no son válidos" });
     }
-    const cacheKey = `negocios:${limitNumber}:${pageNumber}`;
 
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
     const negociosData = await negocioModel.getNegocios(
       limitNumber,
       pageNumber
     );
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(negociosData));
-
     res.status(200).json(negociosData);
   } catch (error) {
     console.error("Error al obtener los negocios:", error);
@@ -65,10 +57,6 @@ const addNegocio = async (req, res) => {
         .status(400)
         .json({ error: "Todos los campos son obligatorios" });
     }
-    const keys = await redisClient.keys("negocios:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
 
     const newNegocio = await negocioModel.addNegocio({
       nombre: nombre.toUpperCase(),
@@ -105,16 +93,6 @@ const updateNegocio = async (req, res) => {
     if (!negocio) {
       return res.status(404).json({ error: "El negocio no existe" });
     }
-
-    //Eliminar caché del negocio individual
-    await redisClient.del(`negocio:${id}`);
-
-    //Eliminar todas las cachés de listas de negocios (paginadas)
-    const keys = await redisClient.keys("negocios:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
-
     await negocioModel.updateNegocio(id, {
       nombre: nombre.toUpperCase(),
       direccion: direccion.toUpperCase(),
@@ -132,12 +110,6 @@ const deleteNegocio = async (req, res) => {
     if (!id) {
       return res.status(400).json({ error: "El id es obligatorio" });
     }
-    await redisClient.del(`negocio:${id}`);
-
-    const keys = await redisClient.keys("negocios:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
-    }
     const deletedNegocio = await negocioModel.updateNegocioStatus(id, 0);
     res.json(deletedNegocio);
   } catch (error) {
@@ -150,12 +122,6 @@ const upNegocio = async (req, res) => {
     const { id } = req.params;
     if (!id) {
       return res.status(400).json({ error: "El id es obligatorio" });
-    }
-    await redisClient.del(`negocio:${id}`);
-
-    const keys = await redisClient.keys("negocios:*");
-    if (keys.length > 0) {
-      await redisClient.del(keys);
     }
     const upNegocio = await negocioModel.updateNegocioStatus(id, 1);
     res.json(upNegocio);

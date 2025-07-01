@@ -1,20 +1,4 @@
 const notasCreditoModel = require("../models/notasCreditoModel");
-const { redisClient } = require("../db");
-
-const clearNotasCreditoCache = async () => {
-  try {
-    const keys = await redisClient.keys("NotasCredito:*");
-    const negocioKeys = await redisClient.keys("NotasCreditoNegocio:*");
-
-    const allKeys = [...keys, ...negocioKeys];
-
-    if (allKeys.length > 0) {
-      await redisClient.del(allKeys);
-    }
-  } catch (error) {
-    console.error("Error al limpiar la caché de NotasCredito:", error);
-  }
-};
 
 const getNotasCredito = async (req, res) => {
   try {
@@ -32,19 +16,10 @@ const getNotasCredito = async (req, res) => {
         .status(400)
         .json({ error: "Parámetros de paginación no válidos" });
     }
-
-    const cacheKey = `NotasCredito:${limitNumber}:${pageNumber}`;
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
-
     const notasCreditoData = await notasCreditoModel.getNotasCredito(
       limitNumber,
       pageNumber
     );
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(notasCreditoData));
-
     res.json(notasCreditoData);
   } catch (error) {
     console.error("Error al obtener las NotasCredito:", error);
@@ -84,18 +59,11 @@ const getNotasCreditoByNegocioId = async (req, res) => {
         .json({ error: "Parámetros de paginación no válidos" });
     }
 
-    const cacheKey = `NotasCreditoNegocio:${limitNumber}:${pageNumber}`;
-    const cachedData = await redisClient.get(cacheKey);
-    if (cachedData) {
-      return res.status(200).json(JSON.parse(cachedData));
-    }
-
     const notasCreditoData = await notasCreditoModel.getNotasCreditoByNegocioId(
       negocioId,
       limitNumber,
       pageNumber
     );
-    await redisClient.setEx(cacheKey, 600, JSON.stringify(notasCreditoData));
 
     res.json(notasCreditoData);
   } catch (error) {

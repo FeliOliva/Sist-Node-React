@@ -2,9 +2,8 @@ const express = require("express");
 require("dotenv").config();
 const { generateToken, verifyToken } = require("./auth");
 const { prisma } = require("./db");
-const bcrypt = require("bcrypt");
 const cors = require("cors");
-const { setupWebSocket } = require("./websocket"); // nuevo
+const { setupWebSocket } = require("./websocket");
 const http = require("http");
 
 const app = express();
@@ -27,7 +26,6 @@ const chequesRoutes = require("./routes/chequeRoutes");
 const resumenCuentaRoutes = require("./routes/resumenCuenta");
 const cajaRoutes = require("./routes/cajaRoutes");
 const metodosPagoRoutes = require("./routes/metodosPagoRoutes");
-
 
 app.use(
   cors({
@@ -90,7 +88,7 @@ app.use(
   notasCreditoRoutes,
   tiposUnidadesRoutes,
   chequesRoutes,
-  cajaRoutes, 
+  cajaRoutes,
   metodosPagoRoutes
 );
 
