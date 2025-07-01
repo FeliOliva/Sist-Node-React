@@ -94,21 +94,6 @@ const CierreCajaGeneral = () => {
     setLoading(false);
   };
 
-  const handleCerrarPendiente = async (record) => {
-    try {
-      await api(`api/cierre-caja/${record.id}/cerrar`, "PATCH");
-      showNotification(
-        "success",
-        "Cierre actualizado",
-        "Estado actualizado correctamente"
-      );
-      const nuevosCierres = await api("api/cierres-caja", "GET");
-      setCierres(nuevosCierres);
-    } catch (error) {
-      showNotification("error", "Error", "No se pudo actualizar el cierre");
-    }
-  };
-
   const formatCurrency = (value) => `$${value?.toLocaleString() || 0}`;
   const formatDate = (date) => new Date(date).toLocaleString();
   return (
@@ -413,6 +398,7 @@ const CierreCajaGeneral = () => {
                             "PATCH",
                             JSON.stringify({
                               totalPagado: parseFloat(nuevoMonto),
+                              estado: 1, // 1 para cerrado
                             })
                           )
                             .then(() => {
@@ -530,6 +516,7 @@ const CierreCajaGeneral = () => {
                           "PATCH",
                           JSON.stringify({
                             totalPagado: parseFloat(nuevoMonto),
+                            estado: 1,
                           })
                         )
                           .then(() => {

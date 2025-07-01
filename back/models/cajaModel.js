@@ -136,7 +136,7 @@ const getCajaById = async (id) => {
   }
 };
 
-const editarCierreCaja = async (cierreId, totalPagado) => {
+const editarCierreCaja = async (cierreId, estado, totalPagado) => {
   try {
     const cierre = await prisma.cierreCaja.findUnique({
       where: { id: cierreId },
@@ -152,6 +152,7 @@ const editarCierreCaja = async (cierreId, totalPagado) => {
       where: { id: cierreId },
       data: {
         totalPagado,
+        estado: estado,
         ingresoLimpio: nuevoIngresoLimpio,
       },
     });

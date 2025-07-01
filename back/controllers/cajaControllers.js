@@ -23,10 +23,11 @@ const crearCierreCaja = async (req, res) => {
 const editarCierreCaja = async (req, res) => {
   try {
     const cierreId = parseInt(req.params.id);
-    const { totalPagado } = req.body;
+    const { totalPagado, estado } = req.body;
 
     const cierreActualizado = await cajaModel.editarCierreCaja(
       cierreId,
+      estado,
       totalPagado
     );
 
