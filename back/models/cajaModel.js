@@ -35,9 +35,9 @@ const crearCierreCaja = async (data) => {
         totalVentas: data.totalVentas,
         totalPagado: data.totalPagado,
         totalCuentaCorriente: data.totalCuentaCorriente || 0,
-        totalDiferido: data.totalDiferido || 0,
+        totalEfectivo: data.totalEfectivo || 0,
         ingresoLimpio: data.ingresoLimpio || 0,
-        estado: data.estado || 0, // ← se pasa manualmente, default 0 si falta
+        estado: data.estado || 0,
 
         CierreCajaMetodoPago: {
           create:
@@ -146,7 +146,7 @@ const editarCierreCaja = async (cierreId, totalPagado) => {
       throw new Error("Cierre no encontrado");
     }
 
-    const nuevoIngresoLimpio = totalPagado - cierre.totalVentas;
+    const nuevoIngresoLimpio = totalPagado - cierre.totalEfectivo;
 
     const cierreActualizado = await prisma.cierreCaja.update({
       where: { id: cierreId },

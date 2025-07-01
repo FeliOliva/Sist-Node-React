@@ -165,7 +165,7 @@ model CierreCaja {
   totalVentas          Int      @default(0)
   totalPagado          Int      @default(0)
   totalCuentaCorriente Int      @default(0)
-  totalDiferido        Int      @default(0)
+  totalEfectivo        Int      @default(0)
   ingresoLimpio        Int      @default(0) // ventas - (compras + gastos si querés sumar eso)
   usuario              Usuario? @relation(fields: [usuarioId], references: [id])
   estado               Int      @default(0)

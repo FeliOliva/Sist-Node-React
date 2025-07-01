@@ -386,22 +386,34 @@ const getTotalesEntregasDelDiaPorCaja = async () => {
   agrupadas.forEach((registro) => {
     const { cajaId, metodoPagoId, _sum } = registro;
     const metodo = metodos.find((m) => m.id === metodoPagoId);
+    const monto = _sum.monto || 0;
+    const nombreMetodo = metodo?.nombre?.toLowerCase() || "";
+
     if (!cajasMap[cajaId]) {
       cajasMap[cajaId] = {
         cajaId,
+        totalEfectivo: 0,
+        totalOtros: 0,
         totalEntregado: 0,
         metodosPago: [],
       };
     }
-    cajasMap[cajaId].totalEntregado += _sum.monto || 0;
+
+    cajasMap[cajaId].totalEntregado += monto;
+
+    if (nombreMetodo === "efectivo") {
+      cajasMap[cajaId].totalEfectivo += monto;
+    } else {
+      cajasMap[cajaId].totalOtros += monto;
+    }
+
     cajasMap[cajaId].metodosPago.push({
       metodoPagoId,
       nombre: metodo?.nombre || `Método ${metodoPagoId}`,
-      total: _sum.monto || 0,
+      total: monto,
     });
   });
 
-  // 5. Convertir a array
   return Object.values(cajasMap);
 };
 

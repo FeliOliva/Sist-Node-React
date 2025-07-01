@@ -26,7 +26,7 @@ const CierreCajaGeneral = () => {
     setDetalleMetodos(data);
     setMostrarDetalleId(cierreId);
   };
-
+  console.log("cierres", cierres);
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
     setTimeout(() => setNotification(null), 4000);
@@ -40,6 +40,10 @@ const CierreCajaGeneral = () => {
     const encontrado = totalesEntregas.find((t) => t.cajaId === cajaId);
     return encontrado ? encontrado.totalEntregado : 0;
   };
+  const getTotalEfectivo = (cajaId) => {
+    const encontrado = totalesEntregas.find((t) => t.cajaId === cajaId);
+    return encontrado ? encontrado.totalEfectivo : 0;
+  };
   const getMetodosPagoPorCaja = (cajaId) => {
     const encontrado = totalesEntregas.find((t) => t.cajaId === cajaId);
     return encontrado?.metodosPago || [];
@@ -49,19 +53,21 @@ const CierreCajaGeneral = () => {
     setLoading(true);
     const contado = montosContados[caja.id] || 0;
     const totalSistema = getTotalSistema(caja.id);
-    const diferencia = contado - totalSistema;
+    const efectivo = getTotalEfectivo(caja.id);
+    const diferencia = contado - efectivo;
     const metodosPago = getMetodosPagoPorCaja(caja.id);
-
     try {
       await api(
         "api/cierre-caja",
         "POST",
         JSON.stringify({
           cajaId: caja.id,
+          usuarioId: parseInt(sessionStorage.getItem("usuarioId")),
           totalVentas: totalSistema,
           totalPagado: contado,
           ingresoLimpio: diferencia,
-          estado: 2, // ← Cerrado
+          totalEfectivo: efectivo,
+          estado: 1, // 1 para cerrado 0 para pendiente
           metodosPago: metodosPago.map((m) => ({
             nombre: m.nombre,
             total: m.total,
@@ -105,7 +111,6 @@ const CierreCajaGeneral = () => {
 
   const formatCurrency = (value) => `$${value?.toLocaleString() || 0}`;
   const formatDate = (date) => new Date(date).toLocaleString();
-  console.log(cajas);
   return (
     <div className="p-4 max-w-7xl mx-auto">
       {/* Notification */}
@@ -142,6 +147,9 @@ const CierreCajaGeneral = () => {
                   Total Sistema
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Efectivo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -156,7 +164,8 @@ const CierreCajaGeneral = () => {
               {cajas.map((caja) => {
                 const contado = montosContados[caja.id] || 0;
                 const sistema = getTotalSistema(caja.id);
-                const diferencia = contado - sistema;
+                const efectivo = getTotalEfectivo(caja.id);
+                const diferencia = contado - efectivo;
 
                 return (
                   <tr key={caja.id}>
@@ -165,6 +174,9 @@ const CierreCajaGeneral = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatCurrency(sistema)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatCurrency(efectivo)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
@@ -309,7 +321,6 @@ const CierreCajaGeneral = () => {
           </h2>
         </div>
 
-        {/* Vista Desktop */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -327,6 +338,9 @@ const CierreCajaGeneral = () => {
                   Total Sistema
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Efectivo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -334,6 +348,9 @@ const CierreCajaGeneral = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Detalles
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acción
@@ -356,27 +373,32 @@ const CierreCajaGeneral = () => {
                     {formatCurrency(cierre.totalVentas)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatCurrency(cierre.totalEfectivo)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatCurrency(cierre.totalPagado)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatCurrency(cierre.ingresoLimpio)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap space-x-2">
-                    {cierre.estado === "pendiente" ? (
-                      <button
-                        onClick={() => handleCerrarPendiente(cierre)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
-                      >
-                        Cerrar Pendiente
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => verDetalleMetodos(cierre.id)}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md text-sm"
-                      >
-                        Ver detalles
-                      </button>
-                    )}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                        cierre.estado === 0
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {cierre.estado === 0 ? "Abierta" : "Cerrada"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => verDetalleMetodos(cierre.id)}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md text-sm"
+                    >
+                      Ver detalles
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
@@ -430,7 +452,7 @@ const CierreCajaGeneral = () => {
               key={cierre.id}
               className="p-4 border-b border-gray-200 last:border-b-0"
             >
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="font-medium text-gray-900">
@@ -441,13 +463,13 @@ const CierreCajaGeneral = () => {
                     </div>
                   </div>
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      cierre.estado === "pendiente"
+                    className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                      cierre.estado === 0
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-green-100 text-green-800"
                     }`}
                   >
-                    {cierre.estado === "pendiente" ? "Pendiente" : "Cerrado"}
+                    {cierre.estado === 0 ? "Abierta" : "Cerrada"}
                   </span>
                 </div>
 
@@ -463,12 +485,18 @@ const CierreCajaGeneral = () => {
                     </div>
                   </div>
                   <div>
+                    <span className="text-gray-600">Efectivo:</span>
+                    <div className="font-medium">
+                      {formatCurrency(cierre.totalEfectivo)}
+                    </div>
+                  </div>
+                  <div>
                     <span className="text-gray-600">Contado:</span>
                     <div className="font-medium">
                       {formatCurrency(cierre.totalPagado)}
                     </div>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <span className="text-gray-600">Diferencia:</span>
                     <div
                       className={`font-medium ${
@@ -482,51 +510,52 @@ const CierreCajaGeneral = () => {
                   </div>
                 </div>
 
-                {cierre.estado === "pendiente" && (
+                <div className="flex flex-col gap-2">
                   <button
-                    onClick={() => handleCerrarPendiente(cierre)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                    onClick={() => verDetalleMetodos(cierre.id)}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm"
                   >
-                    Cerrar Pendiente
+                    Ver detalles
                   </button>
-                )}
-                <button
-                  onClick={() => {
-                    const nuevoMonto = prompt(
-                      "Nuevo monto contado:",
-                      cierre.totalPagado
-                    );
-                    if (nuevoMonto !== null) {
-                      api(
-                        `api/cierre-caja/${cierre.id}`,
-                        "PATCH",
-                        JSON.stringify({
-                          totalPagado: parseFloat(nuevoMonto),
-                        })
-                      )
-                        .then(() => {
-                          showNotification(
-                            "success",
-                            "Monto actualizado",
-                            "El cierre fue actualizado."
+
+                  <button
+                    onClick={() => {
+                      const nuevoMonto = prompt(
+                        "Nuevo monto contado:",
+                        cierre.totalPagado
+                      );
+                      if (nuevoMonto !== null) {
+                        api(
+                          `api/cierre-caja/${cierre.id}`,
+                          "PATCH",
+                          JSON.stringify({
+                            totalPagado: parseFloat(nuevoMonto),
+                          })
+                        )
+                          .then(() => {
+                            showNotification(
+                              "success",
+                              "Monto actualizado",
+                              "El cierre fue actualizado."
+                            );
+                            api("api/cierres-caja", "GET").then((data) =>
+                              setCierres(data)
+                            );
+                          })
+                          .catch(() =>
+                            showNotification(
+                              "error",
+                              "Error",
+                              "No se pudo actualizar el monto contado"
+                            )
                           );
-                          api("api/cierres-caja", "GET").then((data) =>
-                            setCierres(data)
-                          );
-                        })
-                        .catch(() =>
-                          showNotification(
-                            "error",
-                            "Error",
-                            "No se pudo actualizar el monto contado"
-                          )
-                        );
-                    }
-                  }}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Editar Contado
-                </button>
+                      }
+                    }}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm"
+                  >
+                    Editar Contado
+                  </button>
+                </div>
               </div>
             </div>
           ))}
