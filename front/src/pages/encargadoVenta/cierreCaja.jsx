@@ -54,37 +54,35 @@ const CierreCajaEncargado = () => {
   }, [cajaId, usuarioId]);
 
 
-  const handleCerrarCaja = async () => {
-    setLoading(true);
-    try {
-      await api("api/cierre-caja", "POST", {
-        cajaId,
-        totalVentas: totalSistema,
-        totalPagado: parseFloat(montoContado),
-        ingresoLimpio: parseFloat(montoContado) - totalSistema,
-        metodosPago: metodosPago.map((m) => ({
-          nombre: m.nombre,
-          total: m.total,
-        })),
-      });
-      notification.success({
-        message: "Cierre realizado",
-        description: "El cierre de caja se guardó correctamente.",
-      });
-      // Resetea todos los valores
-      setCaja(null);
-      setTotalSistema(0);
-      setMontoContado("");
-      // 4. Refresca los datos y el historial
-      await fetchData();
-    } catch (err) {
-      notification.error({
-        message: "Error",
-        description: "No se pudo realizar el cierre de caja.",
-      });
-    }
-    setLoading(false);
-  };
+const handleCerrarCaja = async () => {
+  setLoading(true);
+  try {
+    await api("api/cierre-caja", "POST", {
+      cajaId,
+      totalVentas: totalSistema,
+      totalPagado: totalSistema, // Usa el total del sistema como contado
+      ingresoLimpio: 0,         // Diferencia siempre 0
+      metodosPago: metodosPago.map((m) => ({
+        nombre: m.nombre,
+        total: m.total,
+      })),
+      estado: 0,
+    });
+    notification.success({
+      message: "Cierre realizado",
+      description: "El cierre de caja se guardó correctamente.",
+    });
+    setCaja(null);
+    setTotalSistema(0);
+    await fetchData();
+  } catch (err) {
+    notification.error({
+      message: "Error",
+      description: "No se pudo realizar el cierre de caja.",
+    });
+  }
+  setLoading(false);
+};
   // Columnas para el historial
   const columns = [
     {
@@ -160,37 +158,10 @@ const CierreCajaEncargado = () => {
               ))}
             </ul>
           </div>
-          <div className="mb-2">
-            <label className="block text-sm font-medium">Contado:</label>
-            <Input
-              type="number"
-              min="0"
-              value={montoContado}
-              onChange={(e) => setMontoContado(e.target.value)}
-              placeholder="Ingrese el monto contado"
-            />
-          </div>
-          <div className="mb-4">
-            <strong>Diferencia:</strong>{" "}
-            <span
-              style={{
-                color:
-                  parseFloat(montoContado) - totalSistema === 0
-                    ? "green"
-                    : "red",
-              }}
-            >
-              $
-              {isNaN(parseFloat(montoContado))
-                ? 0
-                : parseFloat(montoContado) - totalSistema}
-            </span>
-          </div>
           <Button
             type="primary"
             onClick={handleCerrarCaja}
             loading={loading}
-            disabled={!montoContado || isNaN(parseFloat(montoContado))}
             block
           >
             Cerrar Caja

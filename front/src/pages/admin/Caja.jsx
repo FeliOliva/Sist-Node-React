@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../services/api";
+import { PrinterOutlined } from "@ant-design/icons";
 
 const CierreCajaGeneral = () => {
   const [cajas, setCajas] = useState([]);
@@ -94,6 +95,73 @@ const CierreCajaGeneral = () => {
     setLoading(false);
   };
 
+
+
+  const capitalize = (str) =>
+  str && typeof str === "string"
+    ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+    : "";
+
+const handleImprimirCierre = async (cierre) => {
+  let metodosPago = cierre.metodosPago;
+  // Si no viene el detalle, lo traemos por API
+  if (!metodosPago || metodosPago.length === 0) {
+    try {
+      metodosPago = await api(
+        `api/cierre-caja/${cierre.id}/detalle-metodos`,
+        "GET"
+      );
+    } catch (e) {
+      metodosPago = [];
+    }
+  }
+
+  const printWindow = window.open("", "_blank");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Cierre de Caja</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; }
+          h2 { margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+        </style>
+      </head>
+      <body>
+        <h2>Cierre de Caja</h2>
+        <p><strong>Fecha:</strong> ${new Date(cierre.fecha).toLocaleString("es-AR")}</p>
+        <p><strong>Caja:</strong> ${cierre.caja?.nombre || "-"}</p>
+        <p><strong>Usuario:</strong> ${cierre.usuario?.usuario || "-"}</p>
+        <p><strong>Total Sistema:</strong> $${cierre.totalVentas?.toLocaleString("es-AR")}</p>
+        <p><strong>Total Efectivo:</strong> $${cierre.totalEfectivo?.toLocaleString("es-AR")}</p>
+        <p><strong>Contado:</strong> $${cierre.totalPagado?.toLocaleString("es-AR")}</p>
+        <p><strong>Diferencia:</strong> $${cierre.ingresoLimpio?.toLocaleString("es-AR")}</p>
+        <p><strong>Estado:</strong> ${cierre.estado === 0 ? "Abierta" : "Cerrada"}</p>
+        <h3>Detalle de Métodos de Pago</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Método</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(metodosPago || []).map(m => `
+              <tr >
+                <td>${capitalize(m.metodoPago || m.nombre)}</td>
+                <td>$${(m.total || 0).toLocaleString("es-AR")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+};
+
   const formatCurrency = (value) => `$${value?.toLocaleString() || 0}`;
   const formatDate = (date) => new Date(date).toLocaleString();
   return (
@@ -101,11 +169,10 @@ const CierreCajaGeneral = () => {
       {/* Notification */}
       {notification && (
         <div
-          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${
-            notification.type === "success"
-              ? "bg-green-100 border-green-500 text-green-800"
-              : "bg-red-100 border-red-500 text-red-800"
-          } border-l-4`}
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${notification.type === "success"
+            ? "bg-green-100 border-green-500 text-green-800"
+            : "bg-red-100 border-red-500 text-red-800"
+            } border-l-4`}
         >
           <h4 className="font-semibold">{notification.message}</h4>
           <p className="text-sm">{notification.description}</p>
@@ -275,9 +342,8 @@ const CierreCajaGeneral = () => {
                     <div className="text-sm">
                       <span className="text-gray-600">Diferencia: </span>
                       <span
-                        className={`font-medium ${
-                          diferencia >= 0 ? "text-green-600" : "text-red-600"
-                        }`}
+                        className={`font-medium ${diferencia >= 0 ? "text-green-600" : "text-red-600"
+                          }`}
                       >
                         {formatCurrency(diferencia)}
                       </span>
@@ -310,6 +376,7 @@ const CierreCajaGeneral = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th></th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha
                 </th>
@@ -334,10 +401,10 @@ const CierreCajaGeneral = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Detalles
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-9 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acción
                 </th>
               </tr>
@@ -345,6 +412,21 @@ const CierreCajaGeneral = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {cierres.map((cierre) => (
                 <tr key={cierre.id}>
+                  <td className="px-2 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => handleImprimirCierre(cierre)}
+                      disabled={cierre.estado !== 2}
+                      className={`bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1 rounded-md text-sm ${cierre.estado !== 2 ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      title={
+                        cierre.estado !== 2
+                          ? "Solo se puede imprimir si la caja esta cerrada"
+                          : "Imprimir cierre"
+                      }
+                    >
+                      <PrinterOutlined />
+                    </button>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatDate(cierre.fecha)}
                   </td>
@@ -368,24 +450,23 @@ const CierreCajaGeneral = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                        cierre.estado === 0
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${cierre.estado === 0
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                        }`}
                     >
                       {cierre.estado === 0 ? "Abierta" : "Cerrada"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-4 whitespace-nowrap">
                     <button
                       onClick={() => verDetalleMetodos(cierre.id)}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-md text-sm"
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-1 rounded-md text-sm"
                     >
                       Ver detalles
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-4 whitespace-nowrap">
                     <button
                       onClick={() => {
                         const nuevoMonto = prompt(
@@ -449,11 +530,10 @@ const CierreCajaGeneral = () => {
                     </div>
                   </div>
                   <span
-                    className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                      cierre.estado === 0
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
+                    className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${cierre.estado === 0
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-green-100 text-green-800"
+                      }`}
                   >
                     {cierre.estado === 0 ? "Abierta" : "Cerrada"}
                   </span>
@@ -485,11 +565,10 @@ const CierreCajaGeneral = () => {
                   <div className="col-span-2">
                     <span className="text-gray-600">Diferencia:</span>
                     <div
-                      className={`font-medium ${
-                        cierre.ingresoLimpio >= 0
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
+                      className={`font-medium ${cierre.ingresoLimpio >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                        }`}
                     >
                       {formatCurrency(cierre.ingresoLimpio)}
                     </div>

@@ -319,7 +319,7 @@ const handleCerrarCaja = async () => {
         totalVentas: cajaInfo.totalSistema,
         totalPagado: cajaInfo.totalSistema,
         ingresoLimpio: 0,
-        estado: 2,
+        estado: 0,
         metodosPago: metodosPago.map((m) => ({
           nombre: m.nombre,
           total: m.total,
@@ -564,6 +564,7 @@ const handleCerrarCaja = async () => {
         description: notificationDescription,
         icon: <CheckCircleOutlined style={{ color: "#52c41a" }} />,
       });
+      setProcessingPayment(false);
     } catch (error) {
       let msg = "Error al procesar el pago. Intente nuevamente.";
       if (error?.response && error.response.data?.message) {
