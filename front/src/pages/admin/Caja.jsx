@@ -27,7 +27,6 @@ const CierreCajaGeneral = () => {
     setDetalleMetodos(data);
     setMostrarDetalleId(cierreId);
   };
-  console.log("cierres", cierres);
   const showNotification = (type, message, description) => {
     setNotification({ type, message, description });
     setTimeout(() => setNotification(null), 4000);
@@ -95,29 +94,27 @@ const CierreCajaGeneral = () => {
     setLoading(false);
   };
 
-
-
   const capitalize = (str) =>
-  str && typeof str === "string"
-    ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
-    : "";
+    str && typeof str === "string"
+      ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+      : "";
 
-const handleImprimirCierre = async (cierre) => {
-  let metodosPago = cierre.metodosPago;
-  // Si no viene el detalle, lo traemos por API
-  if (!metodosPago || metodosPago.length === 0) {
-    try {
-      metodosPago = await api(
-        `api/cierre-caja/${cierre.id}/detalle-metodos`,
-        "GET"
-      );
-    } catch (e) {
-      metodosPago = [];
+  const handleImprimirCierre = async (cierre) => {
+    let metodosPago = cierre.metodosPago;
+    // Si no viene el detalle, lo traemos por API
+    if (!metodosPago || metodosPago.length === 0) {
+      try {
+        metodosPago = await api(
+          `api/cierre-caja/${cierre.id}/detalle-metodos`,
+          "GET"
+        );
+      } catch (e) {
+        metodosPago = [];
+      }
     }
-  }
 
-  const printWindow = window.open("", "_blank");
-  printWindow.document.write(`
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
     <html>
       <head>
         <title>Cierre de Caja</title>
@@ -130,14 +127,26 @@ const handleImprimirCierre = async (cierre) => {
       </head>
       <body>
         <h2>Cierre de Caja</h2>
-        <p><strong>Fecha:</strong> ${new Date(cierre.fecha).toLocaleString("es-AR")}</p>
+        <p><strong>Fecha:</strong> ${new Date(cierre.fecha).toLocaleString(
+          "es-AR"
+        )}</p>
         <p><strong>Caja:</strong> ${cierre.caja?.nombre || "-"}</p>
         <p><strong>Usuario:</strong> ${cierre.usuario?.usuario || "-"}</p>
-        <p><strong>Total Sistema:</strong> $${cierre.totalVentas?.toLocaleString("es-AR")}</p>
-        <p><strong>Total Efectivo:</strong> $${cierre.totalEfectivo?.toLocaleString("es-AR")}</p>
-        <p><strong>Contado:</strong> $${cierre.totalPagado?.toLocaleString("es-AR")}</p>
-        <p><strong>Diferencia:</strong> $${cierre.ingresoLimpio?.toLocaleString("es-AR")}</p>
-        <p><strong>Estado:</strong> ${cierre.estado === 0 ? "Abierta" : "Cerrada"}</p>
+        <p><strong>Total Sistema:</strong> $${cierre.totalVentas?.toLocaleString(
+          "es-AR"
+        )}</p>
+        <p><strong>Total Efectivo:</strong> $${cierre.totalEfectivo?.toLocaleString(
+          "es-AR"
+        )}</p>
+        <p><strong>Contado:</strong> $${cierre.totalPagado?.toLocaleString(
+          "es-AR"
+        )}</p>
+        <p><strong>Diferencia:</strong> $${cierre.ingresoLimpio?.toLocaleString(
+          "es-AR"
+        )}</p>
+        <p><strong>Estado:</strong> ${
+          cierre.estado === 0 ? "Abierta" : "Cerrada"
+        }</p>
         <h3>Detalle de Métodos de Pago</h3>
         <table>
           <thead>
@@ -147,20 +156,24 @@ const handleImprimirCierre = async (cierre) => {
             </tr>
           </thead>
           <tbody>
-            ${(metodosPago || []).map(m => `
+            ${(metodosPago || [])
+              .map(
+                (m) => `
               <tr >
                 <td>${capitalize(m.metodoPago || m.nombre)}</td>
                 <td>$${(m.total || 0).toLocaleString("es-AR")}</td>
               </tr>
-            `).join("")}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
       </body>
     </html>
   `);
-  printWindow.document.close();
-  printWindow.print();
-};
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const formatCurrency = (value) => `$${value?.toLocaleString() || 0}`;
   const formatDate = (date) => new Date(date).toLocaleString();
@@ -169,10 +182,11 @@ const handleImprimirCierre = async (cierre) => {
       {/* Notification */}
       {notification && (
         <div
-          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${notification.type === "success"
-            ? "bg-green-100 border-green-500 text-green-800"
-            : "bg-red-100 border-red-500 text-red-800"
-            } border-l-4`}
+          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${
+            notification.type === "success"
+              ? "bg-green-100 border-green-500 text-green-800"
+              : "bg-red-100 border-red-500 text-red-800"
+          } border-l-4`}
         >
           <h4 className="font-semibold">{notification.message}</h4>
           <p className="text-sm">{notification.description}</p>
@@ -342,8 +356,9 @@ const handleImprimirCierre = async (cierre) => {
                     <div className="text-sm">
                       <span className="text-gray-600">Diferencia: </span>
                       <span
-                        className={`font-medium ${diferencia >= 0 ? "text-green-600" : "text-red-600"
-                          }`}
+                        className={`font-medium ${
+                          diferencia >= 0 ? "text-green-600" : "text-red-600"
+                        }`}
                       >
                         {formatCurrency(diferencia)}
                       </span>
@@ -416,8 +431,11 @@ const handleImprimirCierre = async (cierre) => {
                     <button
                       onClick={() => handleImprimirCierre(cierre)}
                       disabled={cierre.estado !== 2}
-                      className={`bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1 rounded-md text-sm ${cierre.estado !== 2 ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
+                      className={`bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1 rounded-md text-sm ${
+                        cierre.estado !== 2
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
                       title={
                         cierre.estado !== 2
                           ? "Solo se puede imprimir si la caja esta cerrada"
@@ -450,10 +468,11 @@ const handleImprimirCierre = async (cierre) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${cierre.estado === 0
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                        }`}
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                        cierre.estado === 0
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
                     >
                       {cierre.estado === 0 ? "Abierta" : "Cerrada"}
                     </span>
@@ -471,7 +490,7 @@ const handleImprimirCierre = async (cierre) => {
                       onClick={() => {
                         const nuevoMonto = prompt(
                           "Ingrese el nuevo monto contado:",
-                          cierre.totalPagado
+                          cierre.totalEfectivo
                         );
                         if (nuevoMonto !== null) {
                           api(
@@ -530,10 +549,11 @@ const handleImprimirCierre = async (cierre) => {
                     </div>
                   </div>
                   <span
-                    className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${cierre.estado === 0
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
-                      }`}
+                    className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                      cierre.estado === 0
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
                   >
                     {cierre.estado === 0 ? "Abierta" : "Cerrada"}
                   </span>
@@ -565,10 +585,11 @@ const handleImprimirCierre = async (cierre) => {
                   <div className="col-span-2">
                     <span className="text-gray-600">Diferencia:</span>
                     <div
-                      className={`font-medium ${cierre.ingresoLimpio >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                        }`}
+                      className={`font-medium ${
+                        cierre.ingresoLimpio >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
                     >
                       {formatCurrency(cierre.ingresoLimpio)}
                     </div>

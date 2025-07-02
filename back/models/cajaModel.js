@@ -30,12 +30,14 @@ const crearCierreCaja = async (data) => {
     return await prisma.cierreCaja.create({
       data: {
         fecha: new Date(),
-        usuario: data.usuarioId ? { connect: { id: data.usuarioId } } : undefined,
+        usuario: data.usuarioId
+          ? { connect: { id: data.usuarioId } }
+          : undefined,
         caja: data.cajaId ? { connect: { id: data.cajaId } } : undefined,
         totalVentas: data.totalVentas,
         totalPagado: data.totalPagado,
         totalCuentaCorriente: data.totalCuentaCorriente || 0,
-        // totalEfectivo: data.totalEfectivo || 0,   // <--- ELIMINA ESTA LÍNEA
+        totalEfectivo: data.totalEfectivo || 0,
         ingresoLimpio: data.ingresoLimpio || 0,
         estado: data.estado || 0,
         CierreCajaMetodoPago: {

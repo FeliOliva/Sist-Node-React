@@ -12,10 +12,9 @@ const CierreCajaEncargado = () => {
   const [loadingHistorial, setLoadingHistorial] = useState(false);
   const [metodosPago, setMetodosPago] = useState([]);
 
- const cajaId = Number(sessionStorage.getItem("cajaId"));
+  const cajaId = Number(sessionStorage.getItem("cajaId"));
   const usuarioId = Number(sessionStorage.getItem("usuarioId"));
 
- 
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -47,42 +46,51 @@ const CierreCajaEncargado = () => {
     setLoading(false);
   };
 
-
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line
   }, [cajaId, usuarioId]);
+  const totalEfectivo = metodosPago
+    .filter((m) => m.nombre.toLowerCase() === "efectivo")
+    .reduce((acc, m) => acc + m.total, 0);
 
-
-const handleCerrarCaja = async () => {
-  setLoading(true);
-  try {
-    await api("api/cierre-caja", "POST", {
+  const handleCerrarCaja = async () => {
+    setLoading(true);
+    console.log("Datos para cierre:", {
       cajaId,
-      totalVentas: totalSistema,
-      totalPagado: totalSistema, // Usa el total del sistema como contado
-      ingresoLimpio: 0,         // Diferencia siempre 0
-      metodosPago: metodosPago.map((m) => ({
-        nombre: m.nombre,
-        total: m.total,
-      })),
-      estado: 0,
+      totalSistema,
+      totalEfectivo,
+      metodosPago,
+      usuarioId,
     });
-    notification.success({
-      message: "Cierre realizado",
-      description: "El cierre de caja se guardó correctamente.",
-    });
-    setCaja(null);
-    setTotalSistema(0);
-    await fetchData();
-  } catch (err) {
-    notification.error({
-      message: "Error",
-      description: "No se pudo realizar el cierre de caja.",
-    });
-  }
-  setLoading(false);
-};
+    try {
+      await api("api/cierre-caja", "POST", {
+        cajaId,
+        totalVentas: totalSistema,
+        totalEfectivo: totalEfectivo,
+        totalPagado: totalSistema, // Usa el total del sistema como contado
+        ingresoLimpio: 0, // Diferencia siempre 0
+        metodosPago: metodosPago.map((m) => ({
+          nombre: m.nombre,
+          total: m.total,
+        })),
+        estado: 0,
+      });
+      notification.success({
+        message: "Cierre realizado",
+        description: "El cierre de caja se guardó correctamente.",
+      });
+      setCaja(null);
+      setTotalSistema(0);
+      await fetchData();
+    } catch (err) {
+      notification.error({
+        message: "Error",
+        description: "No se pudo realizar el cierre de caja.",
+      });
+    }
+    setLoading(false);
+  };
   // Columnas para el historial
   const columns = [
     {
@@ -135,7 +143,8 @@ const handleCerrarCaja = async () => {
             <strong>Caja:</strong> {caja?.nombre || "-"}
           </div>
           <div className="mb-2">
-            <strong>Total sistema:</strong> ${totalSistema?.toLocaleString() || 0}
+            <strong>Total sistema:</strong> $
+            {totalSistema?.toLocaleString() || 0}
           </div>
           <div className="mb-2">
             <h3 className="font-semibold mb-2">Detalle por método de pago:</h3>
@@ -183,4 +192,3 @@ const handleCerrarCaja = async () => {
 };
 
 export default CierreCajaEncargado;
-

@@ -69,8 +69,8 @@ const Entregas = () => {
   const [montoContado, setMontoContado] = useState("");
   const [cierreNotification, setCierreNotification] = useState(null);
   const [detalleMetodos, setDetalleMetodos] = useState([]);
-const [mostrarDetalleId, setMostrarDetalleId] = useState(null);
-const [totalesEntregas, setTotalesEntregas] = useState([]);
+  const [mostrarDetalleId, setMostrarDetalleId] = useState(null);
+  const [totalesEntregas, setTotalesEntregas] = useState([]);
 
   // Configurar WebSocket
   useEffect(() => {
@@ -261,95 +261,105 @@ const [totalesEntregas, setTotalesEntregas] = useState([]);
     }
   };
 
-
   // CAJA
 
   const verDetalleMetodos = async (cierreId) => {
-  const data = await api(
-    `api/cierre-caja/${cierreId}/detalle-metodos`,
-    "GET"
-  );
-  setDetalleMetodos(data);
-  setMostrarDetalleId(cierreId);
-};
-
-
-const getMetodosPagoPorCaja = (cajaId) => {
-  // Debes tener los totales de entregas por método de pago en tu estado o calcularlos aquí
-  const encontrado = totalesEntregas.find((t) => t.cajaId === cajaId);
-  return encontrado?.metodosPago || [];
-};
-
-const handleAbrirCierreCaja = async () => {
-  setCierreLoading(true);
-  const cajaId = sessionStorage.getItem("cajaId");
-  try {
-    // Trae info de la caja y el total entregado del día
-    const [caja, totales] = await Promise.all([
-      api(`api/caja/${cajaId}`, "GET"),
-      api("api/entregas/totales-dia-caja", "GET"),
-    ]);
-    const totalSistema =
-      totales.find((t) => t.cajaId === Number(cajaId))?.totalEntregado || 0;
-    setCajaInfo({
-      ...caja,
-      totalSistema,
-    });
-    setTotalesEntregas(totales); // <--- AGREGA ESTA LÍNEA
-    setModalCierreVisible(true);
-  } catch (err) {
-    setCierreNotification({
-      type: "error",
-      message: "No se pudo cargar la caja",
-    });
-  }
-  setCierreLoading(false);
-};
-
-const handleCerrarCaja = async () => {
-  setCierreLoading(true);
-  const metodosPago = getMetodosPagoPorCaja(cajaInfo.id);
-
-  try {
-    await api(
-      "api/cierre-caja",
-      "POST",
-      JSON.stringify({
-        cajaId: cajaInfo.id,
-        totalVentas: cajaInfo.totalSistema,
-        totalPagado: cajaInfo.totalSistema,
-        ingresoLimpio: 0,
-        estado: 0,
-        metodosPago: metodosPago.map((m) => ({
-          nombre: m.nombre,
-          total: m.total,
-        })),
-      })
+    const data = await api(
+      `api/cierre-caja/${cierreId}/detalle-metodos`,
+      "GET"
     );
-    setCierreNotification({
-      type: "success",
-      message: "Cierre realizado correctamente",
-    });
-    setModalCierreVisible(false);
-    // MENSAJE DE ÉXITO
-    notification.success({
-      message: "Caja cerrada",
-      description: "El cierre de caja se realizó correctamente.",
-      placement: "topRight",
-    });
-  } catch (err) {
-    setCierreNotification({
-      type: "error",
-      message: "No se pudo cerrar la caja",
-    });
-    notification.error({
-      message: "Error al cerrar caja",
-      description: "Ocurrió un error al intentar cerrar la caja.",
-      placement: "topRight",
-    });
-  }
-  setCierreLoading(false);
-};
+    setDetalleMetodos(data);
+    setMostrarDetalleId(cierreId);
+  };
+
+  const getMetodosPagoPorCaja = (cajaId) => {
+    // Debes tener los totales de entregas por método de pago en tu estado o calcularlos aquí
+    const encontrado = totalesEntregas.find((t) => t.cajaId === cajaId);
+    return encontrado?.metodosPago || [];
+  };
+
+  const handleAbrirCierreCaja = async () => {
+    setCierreLoading(true);
+    const cajaId = sessionStorage.getItem("cajaId");
+    try {
+      // Trae info de la caja y el total entregado del día
+      const [caja, totales] = await Promise.all([
+        api(`api/caja/${cajaId}`, "GET"),
+        api("api/entregas/totales-dia-caja", "GET"),
+      ]);
+      const totalSistema =
+        totales.find((t) => t.cajaId === Number(cajaId))?.totalEntregado || 0;
+      setCajaInfo({
+        ...caja,
+        totalSistema,
+      });
+      setTotalesEntregas(totales); // <--- AGREGA ESTA LÍNEA
+      setModalCierreVisible(true);
+    } catch (err) {
+      setCierreNotification({
+        type: "error",
+        message: "No se pudo cargar la caja",
+      });
+    }
+    setCierreLoading(false);
+  };
+  const handleCerrarCaja = async () => {
+    setCierreLoading(true);
+
+    const metodosPago = getMetodosPagoPorCaja(cajaInfo.id) || [];
+
+    const totalEfectivo = metodosPago
+      .filter((m) => m.nombre.toLowerCase() === "efectivo")
+      .reduce((acc, m) => acc + (m.total || 0), 0); 
+
+    const payload = {
+      cajaId: cajaInfo.id,
+      totalVentas: cajaInfo.totalSistema,
+      totalEfectivo: totalEfectivo,
+      totalPagado: cajaInfo.totalSistema,
+      ingresoLimpio: 0,
+      estado: 0,
+      metodosPago: metodosPago.map((m) => ({
+        nombre: m.nombre,
+        total: m.total,
+      })),
+    };
+
+    // Mostramos los datos por consola antes de enviarlos
+    console.log("Datos para cierre:", payload);
+
+    try {
+      await api("api/cierre-caja", "POST", payload);
+
+      setCierreNotification({
+        type: "success",
+        message: "Cierre realizado correctamente",
+      });
+
+      setModalCierreVisible(false);
+
+      notification.success({
+        message: "Caja cerrada",
+        description: "El cierre de caja se realizó correctamente.",
+        placement: "topRight",
+      });
+    } catch (err) {
+      console.error("Error al cerrar la caja:", err);
+
+      setCierreNotification({
+        type: "error",
+        message: "No se pudo cerrar la caja",
+      });
+
+      notification.error({
+        message: "Error al cerrar caja",
+        description: "Ocurrió un error al intentar cerrar la caja.",
+        placement: "topRight",
+      });
+    }
+
+    setCierreLoading(false);
+  };
 
   // Efecto para aplicar el filtro cuando cambia el estado del filtro o las entregas
   useEffect(() => {
@@ -1075,57 +1085,66 @@ const handleCerrarCaja = async () => {
           )}
         </Form>
       </Modal>
-<Modal
-  title="Cierre de Caja"
-  open={modalCierreVisible}
-  onCancel={() => setModalCierreVisible(false)}
-  footer={[
-    <Button key="cancel" onClick={() => setModalCierreVisible(false)}>
-      Cancelar
-    </Button>,
-    <Button
-      key="cerrar"
-      type="primary"
-      loading={cierreLoading}
-      onClick={handleCerrarCaja}
-      // Ya no es necesario deshabilitar por montoContado
-    >
-      Confirmar Cierre
-    </Button>,
-  ]}
->
-  {cajaInfo ? (
-  <div>
-    <p>
-      <strong>Caja:</strong> {cajaInfo.nombre}
-    </p>
-    <p>
-      <strong>Total sistema:</strong> $
-      {cajaInfo.totalSistema?.toLocaleString() || 0}
-    </p>
-    {/* Detalle de métodos de pago */}
-    <Divider>Detalle por método de pago</Divider>
-    <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-      {(getMetodosPagoPorCaja(cajaInfo.id) || []).map((m) => (
-        <li key={m.nombre} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span className="capitalize">{m.nombre}</span>
-          <span style={{ fontWeight: "bold" }}>${m.total.toLocaleString("es-AR")}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
-  ) : (
-    <Spin />
-  )}
-  {cierreNotification && (
-    <Alert
-      message={cierreNotification.message}
-      type={cierreNotification.type}
-      showIcon
-      className="mt-2"
-    />
-  )}
-</Modal>
+      <Modal
+        title="Cierre de Caja"
+        open={modalCierreVisible}
+        onCancel={() => setModalCierreVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setModalCierreVisible(false)}>
+            Cancelar
+          </Button>,
+          <Button
+            key="cerrar"
+            type="primary"
+            loading={cierreLoading}
+            onClick={handleCerrarCaja}
+            // Ya no es necesario deshabilitar por montoContado
+          >
+            Confirmar Cierre
+          </Button>,
+        ]}
+      >
+        {cajaInfo ? (
+          <div>
+            <p>
+              <strong>Caja:</strong> {cajaInfo.nombre}
+            </p>
+            <p>
+              <strong>Total sistema:</strong> $
+              {cajaInfo.totalSistema?.toLocaleString() || 0}
+            </p>
+            {/* Detalle de métodos de pago */}
+            <Divider>Detalle por método de pago</Divider>
+            <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+              {(getMetodosPagoPorCaja(cajaInfo.id) || []).map((m) => (
+                <li
+                  key={m.nombre}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span className="capitalize">{m.nombre}</span>
+                  <span style={{ fontWeight: "bold" }}>
+                    ${m.total.toLocaleString("es-AR")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <Spin />
+        )}
+        {cierreNotification && (
+          <Alert
+            message={cierreNotification.message}
+            type={cierreNotification.type}
+            showIcon
+            className="mt-2"
+          />
+        )}
+      </Modal>
     </div>
   );
 };
