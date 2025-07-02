@@ -47,7 +47,7 @@ const getNegocioById = async (req, res) => {
 const addNegocio = async (req, res) => {
   try {
     const { nombre, direccion, esCuentaCorriente, rol_usuario } = req.body;
-    if (rol_usuario !== 0) {
+    if (![0, 3].includes(rol_usuario)) {
       return res
         .status(403)
         .json({ error: "No tienes permiso para realizar esta acción" });

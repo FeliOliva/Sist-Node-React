@@ -83,7 +83,6 @@ const addNotasCredito = async (req, res) => {
     if (!motivo || !monto || !negocioId) {
       return res.status(400).json({ error: "Faltan datos obligatorios" });
     }
-    await clearNotasCreditoCache();
 
     const notasCreditoData = await notasCreditoModel.addNotasCredito({
       motivo,

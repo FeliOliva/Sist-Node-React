@@ -27,6 +27,7 @@ const Productos = () => {
   const [registrarNuevaMedida, setRegistrarNuevaMedida] = useState(false);
   const [nombreNuevaMedida, setNombreNuevaMedida] = useState("");
   const [tiposUnidades, setTiposUnidades] = useState([]);
+  const [filtroEstado, setFiltroEstado] = useState("todos");
 
   const fetchProductos = async (page = 1) => {
     setLoading(true);
@@ -43,21 +44,21 @@ const Productos = () => {
   };
 
   const fetchTiposUnidades = async () => {
-  try {
-    const data = await api("api/tiposUnidades");
-    setTiposUnidades(data);
-  } catch (error) {
-    message.error("Error al cargar unidades");
-  }
-};
+    try {
+      const data = await api("api/tiposUnidades");
+      setTiposUnidades(data);
+    } catch (error) {
+      message.error("Error al cargar unidades");
+    }
+  };
 
-useEffect(() => {
-  if (modalVisible) {
-    fetchTiposUnidades();
-    setRegistrarNuevaMedida(false);
-    setNombreNuevaMedida("");
-  }
-}, [modalVisible]);
+  useEffect(() => {
+    if (modalVisible) {
+      fetchTiposUnidades();
+      setRegistrarNuevaMedida(false);
+      setNombreNuevaMedida("");
+    }
+  }, [modalVisible]);
 
   useEffect(() => {
     fetchProductos(currentPage);
@@ -82,52 +83,52 @@ useEffect(() => {
     }
   };
 
-const onFinish = async (values) => {
-  const token = sessionStorage.getItem("token");
-  let rol_usuario = 0;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    rol_usuario = payload.rol || 0;
-  } catch (e) {
-    message.warning("No se pudo leer el rol del token.");
-  }
-
-  let tipoUnidadId = values.tipoUnidadId;
-
-  // Si se registra una nueva medida, primero la creamos y usamos su id
-  if (registrarNuevaMedida) {
-    if (!nombreNuevaMedida) {
-      message.error("Debe ingresar el nombre de la nueva medida.");
-      return;
-    }
+  const onFinish = async (values) => {
+    const token = sessionStorage.getItem("token");
+    let rol_usuario = 0;
     try {
-      const nuevaUnidad = await api("api/tiposUnidades", "POST", { tipo: nombreNuevaMedida });
-      tipoUnidadId = nuevaUnidad.id;
-      // Actualiza la lista de unidades para futuras altas
-      fetchTiposUnidades();
-    } catch (error) {
-      message.error("Error al registrar la nueva medida.");
-      return;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      rol_usuario = payload.rol || 0;
+    } catch (e) {
+      message.warning("No se pudo leer el rol del token.");
     }
-  }
 
-  const body = {
-    ...values,
-    tipoUnidadId,
-    precioInicial: values.precio,
-    rol_usuario,
+    let tipoUnidadId = values.tipoUnidadId;
+
+    // Si se registra una nueva medida, primero la creamos y usamos su id
+    if (registrarNuevaMedida) {
+      if (!nombreNuevaMedida) {
+        message.error("Debe ingresar el nombre de la nueva medida.");
+        return;
+      }
+      try {
+        const nuevaUnidad = await api("api/tiposUnidades", "POST", { tipo: nombreNuevaMedida });
+        tipoUnidadId = nuevaUnidad.id;
+        // Actualiza la lista de unidades para futuras altas
+        fetchTiposUnidades();
+      } catch (error) {
+        message.error("Error al registrar la nueva medida.");
+        return;
+      }
+    }
+
+    const body = {
+      ...values,
+      tipoUnidadId,
+      precioInicial: values.precio,
+      rol_usuario,
+    };
+
+    try {
+      await api("api/products", "POST", body);
+      message.success("Producto agregado correctamente");
+      form.resetFields();
+      setModalVisible(false);
+      fetchProductos(currentPage);
+    } catch (error) {
+      message.error(error.message || "Error al agregar producto.");
+    }
   };
-
-  try {
-    await api("api/products", "POST", body);
-    message.success("Producto agregado correctamente");
-    form.resetFields();
-    setModalVisible(false);
-    fetchProductos(currentPage);
-  } catch (error) {
-    message.error(error.message || "Error al agregar producto.");
-  }
-};
 
   const columns = [
     {
@@ -154,37 +155,41 @@ const onFinish = async (values) => {
         );
       },
     },
-{
-  title: "Acciones",
-  key: "acciones",
-  render: (text, record) => (
-    <Space size="middle">
-      {record.estado === 1 ? (
-        <Button
-          danger
-          type="primary"
-          size="small"
-          style={{ backgroundColor: "white", borderColor: "#ff4d4f", color: "#ff4d4f" }}
-          onClick={() => toggleProductos(record.id, record.estado)}
-        >
-          Desactivar
-        </Button>
-      ) : (
-        <Button
-          type="primary"
-          size="small"
-          onClick={() => toggleProductos(record.id, record.estado)}
-        >
-          Activar
-        </Button>
-      )}
-    </Space>
-  ),
-},
+    {
+      title: "Acciones",
+      key: "acciones",
+      render: (text, record) => (
+        <Space size="middle">
+          {record.estado === 1 ? (
+            <Button
+              danger
+              type="primary"
+              size="small"
+              style={{ backgroundColor: "white", borderColor: "#ff4d4f", color: "#ff4d4f" }}
+              onClick={() => toggleProductos(record.id, record.estado)}
+            >
+              Desactivar
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => toggleProductos(record.id, record.estado)}
+            >
+              Activar
+            </Button>
+          )}
+        </Space>
+      ),
+    },
   ];
-  const productosFiltrados = productos.filter((p) =>
-    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const productosFiltrados = productos
+    .filter((p) => {
+      if (filtroEstado === "activos") return p.estado === 1;
+      if (filtroEstado === "inactivos") return p.estado === 0;
+      return true;
+    })
+    .filter((p) => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
@@ -201,8 +206,26 @@ const onFinish = async (values) => {
             placeholder="Buscar por nombre"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{ width: 300, marginTop: 10, marginRight: 10 }}
+            style={{ width: 300, marginRight: 10 }}
           />
+          <Button
+            type={filtroEstado === "todos" ? "primary" : "default"}
+            onClick={() => setFiltroEstado("todos")}
+          >
+            Todos
+          </Button>
+          <Button
+            type={filtroEstado === "activos" ? "primary" : "default"}
+            onClick={() => setFiltroEstado("activos")}
+          >
+            Activos
+          </Button>
+          <Button
+            type={filtroEstado === "inactivos" ? "primary" : "default"}
+            onClick={() => setFiltroEstado("inactivos")}
+          >
+            Inactivos
+          </Button>
         </div>
       </div>
       <div className="bg-white rounded-lg shadow-md">

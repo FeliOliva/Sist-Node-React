@@ -73,18 +73,18 @@ const Entregas = () => {
   const [totalesEntregas, setTotalesEntregas] = useState([]);
 
   // Configurar WebSocket
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    const cajaId = sessionStorage.getItem("cajaId");
-    if (!cajaId) {
-      console.error("No hay cajaId en sessionStorage");
-      return;
-    }
+useEffect(() => {
+  if (initialized.current) return;
+  initialized.current = true;
+  const cajaId = sessionStorage.getItem("cajaId");
+  if (!cajaId) {
+    console.error("No hay cajaId en sessionStorage");
+    return;
+  }
 
-    // Crear conexión WebSocket
-    const ws = new WebSocket(`ws://localhost:3001?cajaId=${cajaId}`);
-    setSocket(ws);
+  // Crear conexión WebSocket
+  const ws = new WebSocket(`ws://localhost:3001?cajaId=${cajaId}`);
+  setSocket(ws);
 
     // Evento de conexión establecida
     ws.onopen = () => {
@@ -241,13 +241,12 @@ const Entregas = () => {
       }
     };
 
-    // Limpiar conexión al desmontar
-    return () => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
-    };
-  }, []); // Este efecto solo se ejecuta una vez al montar el componente
+  return () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.close();
+    }
+  };
+}, []); // Este efecto solo se ejecuta una vez al montar el componente
 
   // Función para aplicar filtro por estado
   const applyFilter = (estado, entregasList = entregas) => {

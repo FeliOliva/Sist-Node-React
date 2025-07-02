@@ -86,11 +86,14 @@ const CierreCajaGeneral = () => {
       setCierres(nuevosCierres);
       const nuevasCajas = await api("api/caja", "GET");
       setCajas(nuevasCajas);
+      // --- AGREGAR ESTA LÍNEA PARA ACTUALIZAR SISTEMA Y DIFERENCIA ---
+      const nuevosTotales = await api("api/entregas/totales-dia-caja", "GET");
+      setTotalesEntregas(nuevosTotales);
+      // ---------------------------------------------------------------
       setMontosContados((prev) => ({ ...prev, [caja.id]: 0 }));
     } catch (error) {
-      showNotification("error", "Error", "No se pudo realizar el cierre");
+      showNotification("error", "Error al cerrar caja", error.message);
     }
-
     setLoading(false);
   };
 
